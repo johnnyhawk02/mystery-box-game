@@ -163,7 +163,7 @@ try { if (localStorage.getItem('mb-defaults') !== DEFAULTS_ID) {
 const SETUP_DEFAULTS = {
   apple: {size: 1.15, turn: 0, tiltX: 0, tiltZ: 0, lift: 0, offX: 0, offZ: 0},
   football: {size: 1.3, turn: 0, tiltX: 0, tiltZ: 0, lift: 0.04, offX: 0, offZ: 0},
-  cake: {size: 1.4, turn: 0, tiltX: 0, tiltZ: 0, lift: 0.08, offX: 0, offZ: 0},
+  cake: {size: 1.4, turn: 35, tiltX: 0, tiltZ: 0, lift: 0.04, offX: 0, offZ: 0},
   duck: {size: 1.25, turn: 0, tiltX: 0, tiltZ: 0, lift: 0, offX: 0, offZ: 0},
   egg: {size: 1.45, turn: 0, tiltX: 0, tiltZ: 0, lift: 0, offX: 0, offZ: 0},
   gloves: {size: 1.55, turn: 0, tiltX: 0, tiltZ: 0, lift: 0.05, offX: 0, offZ: 0},

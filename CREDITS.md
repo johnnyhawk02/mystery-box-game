@@ -20,5 +20,7 @@ Models from [BlendSwap](https://www.blendswap.com), converted for the game (reco
 
 - **X-ray** (X): hand radiograph "X-ray of hand 7 09 4.jpg" by Averbone, Wikimedia Commons, CC BY 4.0 (cropped, screen labels removed, printed on a film sheet). https://commons.wikimedia.org/wiki/File:X-ray_of_hand_7_09_4.jpg
 
-Everything else (box with felt door, board, football (used as the B ball), the square table, the grey rock, the birthday cake, the metal spoon, the umbrella) was made for this game in `blender/build_game_models.py`.
+- **Cake** (C): "mango-cake" scanned slice of cake, downloaded by Johnny (source/licence to confirm), textures shrunk and mesh trimmed for the game.
+
+Everything else (box with felt door, board, football (used as the B ball), the square table, the grey rock, the metal spoon, the umbrella) was made for this game in `blender/build_game_models.py`.
 Three.js is MIT licensed (`vendor/THREE-LICENSE`).
