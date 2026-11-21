@@ -349,11 +349,27 @@ function updateShimmers(dt) {
     if (k >= 1) { scene.remove(s.pts); s.pts.geometry.dispose(); s.pts.material.dispose(); shimmers.splice(i, 1); s.resolve(); }
   }
 }
-// fade an object's materials (remembering which were see-through to begin with)
+// shadows can't be half-transparent, so a fading object casts a finely speckled shadow instead: the share of
+// speckles that block light follows the fade, and the soft shadow blur turns that into a smoothly fading shadow
+function setShadowFade(it, f) {
+  if (!it.depthMat) {
+    const uFade = { value: 1 };
+    const m = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
+    m.onBeforeCompile = sh => {
+      sh.uniforms.uFade = uFade;
+      sh.fragmentShader = sh.fragmentShader
+        .replace('void main() {', 'uniform float uFade;\nfloat mbHash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }\nvoid main() {\n  if (mbHash(floor(gl_FragCoord.xy)) > uFade) discard;');
+    };
+    it.depthMat = m; it.shadowFade = uFade;
+    it.node.traverse(o => { if (o.isMesh) o.customDepthMaterial = m; });
+  }
+  it.shadowFade.value = f;
+}
+// fade an object's materials (remembering which were see-through to begin with) and its shadow with it
 function setFade(it, f) {
+  setShadowFade(it, f);
   it.node.traverse(o => {
     if (!o.isMesh) return;
-    o.castShadow = f > 0.6;   // no shadow from an object that isn't there yet
     for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
       if (m.userData.baseOpacity === undefined) { m.userData.baseOpacity = m.opacity; m.userData.baseTransparent = m.transparent; }
       m.opacity = m.userData.baseOpacity * f; m.transparent = f < 1 || m.userData.baseTransparent; m.depthWrite = f >= 1 && !m.userData.baseTransparent;
@@ -717,3 +733,6 @@ document.getElementById('closePanel').addEventListener('click', async () => {
   state = 'idle'; lastActive = clock;
 });
 window.__mb.tileScreen = ch => window.__mb.screenOf(slots[ch].clone().setZ(slots[ch].z + 0.17));
+window.__mb.dbgShadow = () => { const it = current; if (!it) return null; let n = 0, withDepth = 0, uv = 0;
+  it.node.traverse(o => { if (o.isMesh) { n++; if (o.customDepthMaterial) withDepth++; if (o.geometry.attributes.uv) uv++; } });
+  return { n, withDepth, uv, fade: it.shadowFade && it.shadowFade.value, cast: (() => { let c = []; it.node.traverse(o => o.isMesh && c.push(o.castShadow)); return c; })() }; };
