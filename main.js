@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
 import { RoomEnvironment } from './vendor/environments/RoomEnvironment.js';
+import { DRACOLoader } from './vendor/loaders/DRACOLoader.js';
 
 // every object the game knows; each round picks ROUND_SIZE of them with different letters
 const OBJECTS = [
@@ -118,6 +119,8 @@ document.getElementById('full').addEventListener('click', async () => {
 
 // ---------------- load models ----------------
 const loader = new GLTFLoader();
+// some detailed models (the nest) are Draco-compressed to keep them small
+loader.setDRACOLoader(new DRACOLoader().setDecoderPath('vendor/draco/').setDecoderConfig({ type: 'wasm' }));
 // the page passes its version (main.js?v=…) so a new release never mixes with cached old models
 const V = new URL(import.meta.url).searchParams.get('v') || '';
 const load = url => new Promise((res, rej) => loader.load(url + (V ? '?v=' + V : ''), res, undefined, rej));
