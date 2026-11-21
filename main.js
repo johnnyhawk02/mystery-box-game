@@ -174,7 +174,7 @@ const SETUP_DEFAULTS = {
   onion: {size: 1.7, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
   pear: {size: 1.5, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
   rock: {size: 1.2, turn: 20, tiltX: 0, tiltZ: 0, lift: 0.01},
-  spoon: {size: 1.6, turn: 30, tiltX: 0, tiltZ: 0, lift: 0.01},
+  spoon: {size: 1.6, turn: 30, tiltX: 0, tiltZ: 0, lift: 0.045},
   table: {size: 1.1, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
   cake: {size: 1.4, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
   ukulele: {size: 1.8, turn: 0, tiltX: -3, tiltZ: 1, lift: 0.145},
