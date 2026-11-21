@@ -25,6 +25,7 @@ const OBJECTS = [
   { name: 'umbrella', letter: 'U', word: 'umbrella' },
   { name: 'vase', letter: 'V', word: 'vase' },
   { name: 'wateringcan', letter: 'W', word: 'watering can' },
+  { name: 'xray', letter: 'X', word: 'X-ray' },
 ];
 const ROUND_SIZE = 6;
 const SPIN_SECONDS = 7;     // one slow turn while the object waits to be dragged
@@ -177,6 +178,7 @@ const SETUP_DEFAULTS = {
   spoon: {size: 1.6, turn: 30, tiltX: 0, tiltZ: 0, lift: 0.045},
   table: {size: 1.1, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
   cake: {size: 1.4, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
+  xray: {size: 1.3, turn: 0, tiltX: 40, tiltZ: 0, lift: 0.1},
   umbrella: {size: 1.4, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
   vase: {size: 1.6, turn: 0, tiltX: -3, tiltZ: 0, lift: 0},
   wateringcan: {size: 1.9, turn: 314, tiltX: 0, tiltZ: 0, lift: 0.04},
@@ -195,7 +197,7 @@ const DEG = Math.PI / 180;
 function applySetup(it) {
   const c = setupOf(it.name);
   it.inner.scale.setScalar(c.size);
-  it.inner.rotation.set(c.tiltX * DEG, c.turn * DEG, c.tiltZ * DEG, 'YXZ');
+  it.inner.rotation.set(c.tiltX * DEG, c.turn * DEG, c.tiltZ * DEG, 'XYZ');   // turn first, then tilt
   it.inner.position.set(c.offX, c.lift, c.offZ);
 }
 
