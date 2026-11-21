@@ -332,9 +332,23 @@ canvas.addEventListener('pointerdown', e => {
       state = 'dragging'; canvas.setPointerCapture(e.pointerId);
       ray.ray.intersectPlane(dragPlane, dragTarget);
       dragY = current.node.position.y;
+    } else {
+      // tapping a letter tile also works: the object glides over to it, then drops as if dragged
+      const hit = new THREE.Vector3();
+      if (ray.ray.intersectPlane(dragPlane, hit)) {
+        const ch = Object.keys(slots).find(k => Math.abs(hit.x - slots[k].x) < 0.2 && Math.abs(hit.z - (slots[k].z + 0.085)) < 0.25);
+        if (ch) tapTo(ch);
+      }
     }
   }
 });
+async function tapTo(ch) {
+  state = 'busy';
+  dragTarget.copy(slots[ch]);
+  tiles[ch].target = tries >= 2 && ch === current.letter ? 1 : 0.6;
+  await moveTo(current.node, slots[ch].clone().setY(DRAG_Y), DRAG_SCALE, 0.9, 0.2);
+  drop();
+}
 canvas.addEventListener('pointermove', e => {
   if (state !== 'dragging') return;
   pointer(e);
@@ -446,3 +460,4 @@ document.getElementById('copySizes').addEventListener('click', async () => {
   document.getElementById('sizesOut').value = text;
   try { await navigator.clipboard.writeText(text); } catch (e) {}
 });
+window.__mb.tileScreen = ch => window.__mb.screenOf(slots[ch].clone().setZ(slots[ch].z + 0.17));
