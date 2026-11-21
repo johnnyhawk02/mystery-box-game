@@ -166,7 +166,7 @@ caseBtn.addEventListener('click', () => {
 // SETUP_DEFAULTS can be filled from the setup panel's "Copy" output to make them the same on every device.
 // Johnny's settings from 2026-11-21 (evening). Bump DEFAULTS_ID when these change: devices then drop their own
 // saved tweaks so everyone starts from the same defaults.
-const DEFAULTS_ID = '2026-11-21j';
+const DEFAULTS_ID = '2026-11-21k';
 try { if (localStorage.getItem('mb-defaults') !== DEFAULTS_ID) {
   localStorage.removeItem('mb-setup'); localStorage.removeItem('mb-sizes'); localStorage.removeItem('mb-camera');
   localStorage.setItem('mb-defaults', DEFAULTS_ID);
@@ -178,7 +178,7 @@ const SETUP_DEFAULTS = {
   duck: {size: 1.25, turn: 0, tiltX: 0, tiltZ: 0, lift: 0, offX: 0, offZ: 0},
   egg: {size: 1.45, turn: 0, tiltX: 0, tiltZ: 0, lift: 0, offX: 0, offZ: 0},
   fish: {size: 1.3, turn: 90, tiltX: -40, tiltZ: 0, lift: 0.015, offX: 0, offZ: 0.055},
-  gloves: {size: 1.55, turn: 0, tiltX: 0, tiltZ: 0, lift: 0.05, offX: 0, offZ: 0},
+  gloves: {size: 1.65, turn: 0, tiltX: 0, tiltZ: 0, lift: 0.05, offX: 0, offZ: 0},
   hat: {size: 1.65, turn: 0, tiltX: -19, tiltZ: 0, lift: 0.05, offX: 0, offZ: 0},
   jug: {size: 1.7, turn: 0, tiltX: 0, tiltZ: 0, lift: 0, offX: -0.02, offZ: 0.015},
   kiwi: {size: 1.45, turn: 0, tiltX: 0, tiltZ: 0, lift: 0, offX: 0, offZ: 0},
@@ -189,9 +189,9 @@ const SETUP_DEFAULTS = {
   queen: {size: 1.5, turn: 142, tiltX: -23, tiltZ: 0, lift: 0.085, offX: 0, offZ: 0},
   rock: {size: 1.2, turn: 20, tiltX: 0, tiltZ: 0, lift: 0.045, offX: 0, offZ: 0},
   spoon: {size: 1.6, turn: 53, tiltX: 12, tiltZ: 0, lift: 0.06, offX: -0.005, offZ: 0},
-  table: {size: 1, turn: 175, tiltX: 0, tiltZ: 0, lift: 0, offX: 0, offZ: 0},
+  table: {size: 1, turn: 175, tiltX: 0, tiltZ: 0, lift: 0, offX: -0.01, offZ: 0.02},
   zebra: {size: 1.6, turn: 35, tiltX: -39, tiltZ: 0, lift: 0.125, offX: 0, offZ: 0.08},
-  nest: {size: 1.5, turn: 0, tiltX: -25, tiltZ: 0, lift: 0.02, offX: 0, offZ: 0},
+  nest: {size: 1.45, turn: 0, tiltX: 3, tiltZ: 0, lift: 0.02, offX: -0.015, offZ: 0.03},
   umbrella: {size: 1.45, turn: 26, tiltX: 0, tiltZ: 0, lift: 0.08, offX: 0.01, offZ: 0.01},
   vase: {size: 1.6, turn: 0, tiltX: -3, tiltZ: 0, lift: 0, offX: 0, offZ: 0},
   wateringcan: {size: 1.9, turn: 314, tiltX: 0, tiltZ: 0, lift: 0.04, offX: -0.035, offZ: 0.045},
