@@ -22,7 +22,7 @@ const OBJECTS = [
   { name: 'rock', letter: 'R', word: 'rock' },
   { name: 'spoon', letter: 'S', word: 'spoon' },
   { name: 'table', letter: 'T', word: 'table' },
-  { name: 'ukulele', letter: 'U', word: 'ukulele' },
+  { name: 'umbrella', letter: 'U', word: 'umbrella' },
   { name: 'vase', letter: 'V', word: 'vase' },
   { name: 'wateringcan', letter: 'W', word: 'watering can' },
 ];
@@ -177,7 +177,7 @@ const SETUP_DEFAULTS = {
   spoon: {size: 1.6, turn: 30, tiltX: 0, tiltZ: 0, lift: 0.045},
   table: {size: 1.1, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
   cake: {size: 1.4, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
-  ukulele: {size: 1.8, turn: 0, tiltX: -3, tiltZ: 1, lift: 0.145},
+  umbrella: {size: 1.4, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
   vase: {size: 1.6, turn: 0, tiltX: -3, tiltZ: 0, lift: 0},
   wateringcan: {size: 1.9, turn: 314, tiltX: 0, tiltZ: 0, lift: 0.04},
 };
