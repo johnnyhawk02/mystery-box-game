@@ -332,7 +332,7 @@ function shimmer(base, height, radius, seconds) {
     seed.push(0.6 + Math.random() * 0.8);
   }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  const m = new THREE.PointsMaterial({ map: sparkTex, color: 0xfff1d6, size: 0.05, transparent: true, opacity: 0,
+  const m = new THREE.PointsMaterial({ map: sparkTex, color: 0xffdf9e, size: 0.05, transparent: true, opacity: 0,
     depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true });
   const pts = new THREE.Points(g, m); pts.position.copy(base); scene.add(pts);
   return new Promise(resolve => shimmers.push({ pts, t: 0, seconds, height, seed, resolve }));
@@ -353,6 +353,7 @@ function updateShimmers(dt) {
 function setFade(it, f) {
   it.node.traverse(o => {
     if (!o.isMesh) return;
+    o.castShadow = f > 0.6;   // no shadow from an object that isn't there yet
     for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
       if (m.userData.baseOpacity === undefined) { m.userData.baseOpacity = m.opacity; m.userData.baseTransparent = m.transparent; }
       m.opacity = m.userData.baseOpacity * f; m.transparent = f < 1 || m.userData.baseTransparent; m.depthWrite = f >= 1 && !m.userData.baseTransparent;
