@@ -299,13 +299,15 @@ const flapsTo = (f, seconds) => { const f0 = flapOpen; return tween(seconds, t =
 const FLAP_SIGN = -1;   // flaps lift up and outwards
 const PILE_FLOOR = 0.1;          // inside floor height of the box
 const holeBelow = BOX_AT.clone().add(new THREE.Vector3(0, 0.25, 0));
+// inside the box everything is shrunk to fit, whatever its board size
+const pileScale = it => Math.min(0.85, 0.9 / sizeOf(it.name));
 function fillPile(items) {
   const spots = shuffle([[-0.16, -0.12], [0, -0.14], [0.16, -0.1], [-0.15, 0.12], [0.02, 0.13], [0.17, 0.12]]);
   items.forEach((it, i) => {
     const [x, z] = spots[i % spots.length];
     it.pileAt = BOX_AT.clone().add(new THREE.Vector3(x + (Math.random() - 0.5) * 0.04, PILE_FLOOR + (i % 2) * 0.03, z));
     it.node.position.copy(it.pileAt); it.node.rotation.set(0, Math.random() * Math.PI * 2, 0);
-    it.node.scale.setScalar(0.85); it.node.visible = true; it.placed = false;
+    it.node.scale.setScalar(pileScale(it)); it.node.visible = true; it.placed = false;
   });
 }
 
@@ -330,13 +332,13 @@ async function reveal() {
   await roundReady;
   current = queue.pop(); tries = 0;
   const n = current.node;
-  // ease up out of the jumble to just under the felt, then up through the flaps
-  await moveTo(n, holeBelow.clone().setY(holeBelow.y - current.height * 0.4), 0.85, 0.7);
+  // the lid swings fully open (felt flaps part too), the object eases up and out, then the lid closes
   flapsTo(1, 0.9);
+  await Promise.all([play('open'), moveTo(n, holeBelow.clone().setY(holeBelow.y - 0.05), pileScale(current), 1.0)]);
   { const r0 = n.rotation.y, r1 = Math.round(r0 / (2 * Math.PI)) * 2 * Math.PI;   // face its set-up angle as it comes out
     tween(1.4, t => { n.rotation.y = r0 + (r1 - r0) * ease(t); }); }
   await moveTo(n, shownPos(current), revealScale(), 1.4);
-  flapsTo(0, 1.2);
+  flapsTo(0, 1.0); play('close');
   say(current.word);
   state = 'waiting';
 }
@@ -374,13 +376,13 @@ async function finish() {
   state = 'busy';
   await wait(2.5);
   // everything goes back in through the felt, then a fresh set is waiting inside
+  flapsTo(1, 0.8); await play('open');
   for (const it of round) {
-    await moveTo(it.node, aboveBox, 0.85, 1.0, 0.25);
-    flapsTo(1, 0.5);
-    await moveTo(it.node, holeBelow, 0.85, 0.7);
+    await moveTo(it.node, aboveBox, pileScale(it), 1.0, 0.25);
+    await moveTo(it.node, holeBelow.clone().setY(PILE_FLOOR + 0.05), pileScale(it), 0.7);
     it.node.visible = false; it.placed = false;
-    await flapsTo(0, 0.6);
   }
+  flapsTo(0, 1.0); await play('close');
   await newRound();
   state = 'idle'; lastActive = clock;
 }
