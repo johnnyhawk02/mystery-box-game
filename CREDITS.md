@@ -22,5 +22,5 @@ Models from [BlendSwap](https://www.blendswap.com), converted for the game (reco
 - **Egg** (E): "The Egg", Blend Swap #80990, CC-BY 3.0, by the original uploader (credited as required). https://www.blendswap.com/blends/view/80990
 - **Coffee mug** (C, "cup"): "Coffee Mug", from BlendSwap. Author and licence to be confirmed.
 
-Everything else (box with felt door, board, fish, the square table, the grey rock, the birthday cake) was made for this game in `blender/build_game_models.py`.
+Everything else (box with felt door, board, football, the square table, the grey rock, the birthday cake) was made for this game in `blender/build_game_models.py`.
 Three.js is MIT licensed (`vendor/THREE-LICENSE`).
