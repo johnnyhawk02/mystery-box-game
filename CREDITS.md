@@ -17,7 +17,6 @@ Models from [BlendSwap](https://www.blendswap.com), converted for the game (reco
 - **Rubber duck** (D): "Rubber Duck" by mStuff, CC0 (public domain). https://www.blendswap.com/blends/view/69071
 - **Apple** (A): "RedYellow Apple textured for Eevee and Cycles", from BlendSwap. Author and licence to be confirmed.
 - **Egg** (E): "The Egg", Blend Swap #80990, CC-BY 3.0, by the original uploader (credited as required). https://www.blendswap.com/blends/view/80990
-- **Coffee mug** (C, "cup"): "Coffee Mug", from BlendSwap. Author and licence to be confirmed.
 
 - **X-ray** (X): hand radiograph "X-ray of hand 7 09 4.jpg" by Averbone, Wikimedia Commons, CC BY 4.0 (cropped, screen labels removed, printed on a film sheet). https://commons.wikimedia.org/wiki/File:X-ray_of_hand_7_09_4.jpg
 

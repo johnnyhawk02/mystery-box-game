@@ -21,7 +21,9 @@ edge = np.minimum.reduce([xx, w - 1 - xx, yy, h - 1 - yy]) / 40.0
 crop *= np.clip(edge, 0, 1)
 tint = np.array([0.86, 0.93, 1.0])                     # faint blue of x-ray film
 outpx = np.ones((h, w, 4)); outpx[..., :3] = crop[..., None] * tint + 0.02
-tex = bpy.data.images.new('xray_hand', w, h); tex.pixels[:] = outpx.ravel()
+# translucent film: dark areas let light through, bones are nearly solid
+outpx[..., 3] = 0.5 + 0.5 * np.clip(crop * 1.3, 0, 1)
+tex = bpy.data.images.new('xray_hand', w, h, alpha=True); tex.pixels[:] = outpx.ravel()
 tex.filepath_raw = tex_out; tex.file_format = 'PNG'; tex.save()
 # glossy film sheet
 aspect = h / w; SW = 1.0; SH = SW * aspect; T = 0.012
@@ -35,6 +37,9 @@ for loop in me.loops:
 m = bpy.data.materials.new('xray_film'); m.use_nodes = True; nt = m.node_tree; bs = nt.nodes['Principled BSDF']
 tn = nt.nodes.new('ShaderNodeTexImage'); tn.image = tex; nt.links.new(tn.outputs['Color'], bs.inputs['Base Color'])
 bs.inputs['Roughness'].default_value = 0.12
+nt.links.new(tn.outputs['Alpha'], bs.inputs['Alpha'])
+try: m.surface_render_method = 'BLENDED'
+except Exception: m.blend_method = 'BLEND'
 me.materials.append(m)
 bpy.context.view_layer.objects.active = ob; ob.select_set(True)
 md = ob.modifiers.new('b', 'BEVEL'); md.width = 0.05; md.segments = 6; md.affect = 'EDGES'
@@ -46,5 +51,5 @@ root = bpy.data.objects.new('obj_xray', None); bpy.context.scene.collection.obje
 for o in bpy.context.selected_objects: o.select_set(False)
 root.select_set(True); ob.select_set(True)
 bpy.ops.export_scene.gltf(filepath=out, export_format='GLB', use_selection=True, export_apply=True, export_yup=True,
-                          export_image_format='JPEG', export_jpeg_quality=85)
+                          export_image_format='AUTO')   # PNG keeps the see-through alpha
 print('DONE xray', w, h, tuple(round(x, 3) for x in ob.dimensions))
