@@ -53,12 +53,12 @@
   <div class="foot"><button id="resetOne">Reset this</button><button id="resetAll">Reset all</button></div>
   <textarea id="setupOut" rows="2" readonly placeholder="Copy puts the settings here too"></textarea>
 </div>
-<div id="ver">v1.41.0</div>
+<div id="ver">v1.42.0</div>
 <script>
   // iPad/iPhone Safari: no pinch or double-tap zoom, no page bounce, no long-press menu
   for (const ev of ['gesturestart', 'gesturechange', 'gestureend', 'dblclick', 'contextmenu']) document.addEventListener(ev, e => e.preventDefault(), { passive: false });
   document.addEventListener('touchmove', e => { if (!e.target.closest('#panel')) e.preventDefault(); }, { passive: false });
 </script>
-<script type="module" src="main.js?v=1.41.0"></script>
+<script type="module" src="main.js?v=1.42.0"></script>
 </body>
 </html>
