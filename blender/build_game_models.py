@@ -131,9 +131,27 @@ lip = mesh_obj('lid_lip', box_bm(W - 2*T - 0.01, D - 2*T - 0.01, 0.04, at=(0, 0,
 lid_parts.append(lip)
 tp = mesh_obj('lid_panel', box_bm(W - 0.18, D - 0.18, 0.016, at=(0, 0, LZ + 0.064)), C['lidpanel']); bevel(tp, 0.007, 2, angle=False)
 lid_parts.append(tp)
-kn = mesh_obj('knob_stem', cyl_bm(0.03, 0.05, 24, at=(0, 0, LZ + 0.09)), C['boxdark']); lid_parts.append(kn)
-kb = mesh_obj('knob', sphere_bm(0.06, (1, 1, 0.75), at=(0, 0, LZ + 0.135)), C['box']); lid_parts.append(kb)
+# felt door: a square hole in the lid closed by four soft felt flaps (a cross-shaped cut), like the
+# classroom toy. Each flap is its own node, hinged at the hole's edge, so the game can bend them open.
+S = 0.42; FZ = LZ + 0.058
+for prt in list(lid_parts):
+    boolean(prt, mesh_obj('cut', box_bm(S, S, 0.6, at=(0, 0, LZ)), C['lid']))
+ring = mesh_obj('felt_ring', box_bm(S + 0.05, S + 0.05, 0.05, at=(0, 0, LZ + 0.045)), C['boxdark'])
+boolean(ring, mesh_obj('cut', box_bm(S, S, 0.6, at=(0, 0, LZ)), C['lid'])); bevel(ring, 0.01, 2); lid_parts.append(ring)
+C['felt'] = mat('Felt', '9a8fb8', 1.0)
+FLAPS = []
+for k in range(4):
+    bm = bmesh.new(); g = 0.006
+    vs = [bm.verts.new(v) for v in [(-S/2 + g, 0, 0), (S/2 - g, 0, 0), (0, -S/2 + g*1.4, 0)]]   # hinge on the local x axis
+    bm.faces.new(vs)
+    fl = mesh_obj('flap_%d' % k, bm, C['felt'])
+    add_mod(fl, 'SOLIDIFY', thickness=0.012, offset=0); apply_all(fl); bevel(fl, 0.004, 2)
+    ang = k * PI / 2
+    fl.rotation_euler = (0, 0, ang)
+    fl.location = (-math.sin(ang) * S/2, math.cos(ang) * S/2, FZ)
+    FLAPS.append(fl)
 lid = join('box_lid', lid_parts)
+for fl in FLAPS: parent_keep(fl, lid)
 
 # rig
 arm = bpy.data.armatures.new('MysteryBoxRig'); rig = link(bpy.data.objects.new('MysteryBox', arm))
@@ -172,7 +190,7 @@ A_close = make_action('close', [('lid', 1, (OPEN, 0, 0), None), ('lid', 30, (0, 
 A_hint = make_action('hint', [('lid', 1, (0, 0, 0), None), ('lid', 18, (0.12, 0, 0), None), ('lid', 36, (0, 0, 0), None),
                               ('body', 1, None, (1, 1, 1)), ('body', 18, None, (1.02, 1.02, 0.985)), ('body', 36, None, (1, 1, 1))])
 rig.animation_data.action = A_open
-BOX_OBJS = [rig, body, lid, reveal]
+BOX_OBJS = [rig, body, lid, reveal] + FLAPS
 
 # =====================================================================
 # ALPHABET BOARD
@@ -397,6 +415,7 @@ if '--render' in ARGS:
     # 4. close-ups of the box
     hide_objects(); set_lid(0)
     render(os.path.join(out, '4_box_closed.png'), BOX_AT + Vector((0.9, -1.9, 1.2)), BOX_AT + Vector((0, 0, 0.38)), lens=50)
+    render(os.path.join(out, '4b_box_top.png'), BOX_AT + Vector((0.0, -0.5, 2.0)), BOX_AT + Vector((0, 0, 0.6)), lens=50)
     set_lid(OPEN); hide_objects(('apple',)); OBJECTS['apple'][0].location = reveal.matrix_world.translation - Vector((0, 0, 0.1))
     render(os.path.join(out, '5_box_open.png'), BOX_AT + Vector((0.7, -1.9, 1.5)), BOX_AT + Vector((0, 0, 0.5)), lens=48)
     # 6. board from above

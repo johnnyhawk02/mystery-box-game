@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
 
+// every object the game knows; each round picks ROUND_SIZE of them with different letters
 const OBJECTS = [
   { name: 'apple', letter: 'A', word: 'apple' },
   { name: 'ball', letter: 'B', word: 'ball' },
@@ -10,7 +11,23 @@ const OBJECTS = [
   { name: 'duck', letter: 'D', word: 'duck' },
   { name: 'egg', letter: 'E', word: 'egg' },
   { name: 'fish', letter: 'F', word: 'fish' },
+  { name: 'gloves', letter: 'G', word: 'gloves' },
+  { name: 'hat', letter: 'H', word: 'hat' },
+  { name: 'jug', letter: 'J', word: 'jug' },
+  { name: 'kiwi', letter: 'K', word: 'kiwi' },
+  { name: 'lemon', letter: 'L', word: 'lemon' },
+  { name: 'microscope', letter: 'M', word: 'microscope' },
+  { name: 'onion', letter: 'O', word: 'onion' },
+  { name: 'pear', letter: 'P', word: 'pear' },
+  { name: 'rock', letter: 'R', word: 'rock' },
+  { name: 'spoon', letter: 'S', word: 'spoon' },
+  { name: 'television', letter: 'T', word: 'television' },
+  { name: 'ukulele', letter: 'U', word: 'ukulele' },
+  { name: 'vase', letter: 'V', word: 'vase' },
+  { name: 'wateringcan', letter: 'W', word: 'watering can' },
 ];
+const ROUND_SIZE = 6;
+const SPIN_SECONDS = 7;     // one slow turn while the object waits to be dragged
 const BOX_AT = new THREE.Vector3(-2.5, 0, -0.15);
 const BOX_SCALE = 0.85;
 const BOARD_AT = new THREE.Vector3(0, 0, -0.15);
@@ -91,10 +108,7 @@ document.getElementById('full').addEventListener('click', async () => {
 // ---------------- load models ----------------
 const loader = new GLTFLoader();
 const load = url => new Promise((res, rej) => loader.load(url, res, undefined, rej));
-const [boxG, boardG, ...objG] = await Promise.all([
-  load('assets/mystery_box.glb'), load('assets/alphabet_board.glb'),
-  ...OBJECTS.map(o => load(`assets/objects/${o.name}.glb`)),
-]);
+const [boxG, boardG] = await Promise.all([load('assets/mystery_box.glb'), load('assets/alphabet_board.glb')]);
 const shadowy = root => root.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
 
 const box = boxG.scene; box.position.copy(BOX_AT); box.scale.setScalar(BOX_SCALE); shadowy(box); scene.add(box);
@@ -131,12 +145,22 @@ caseBtn.addEventListener('click', () => {
   try { localStorage.setItem('mb-case', lowerCase ? 'lower' : 'upper'); } catch (e) {}
 });
 
-const items = OBJECTS.map((o, i) => {
-  const node = new THREE.Group(); node.add(objG[i].scene); shadowy(node);
-  node.visible = false; scene.add(node);
-  const height = new THREE.Box3().setFromObject(node).getSize(new THREE.Vector3()).y;
-  return { ...o, node, height, placed: false };
-});
+// objects load only when a round needs them, so the game starts fast on a phone
+const loaded = {};
+function getItem(o) {
+  return loaded[o.name] ??= load(`assets/objects/${o.name}.glb`).then(g => {
+    const node = new THREE.Group(); node.add(g.scene); shadowy(node);
+    node.visible = false; scene.add(node);
+    const height = new THREE.Box3().setFromObject(node).getSize(new THREE.Vector3()).y;
+    return { ...o, node, height, placed: false };
+  });
+}
+let round = [], roundReady = null;
+function newRound() {
+  const picks = shuffle(OBJECTS.slice()).slice(0, ROUND_SIZE);
+  roundReady = Promise.all(picks.map(getItem)).then(r => { round = r; queue = shuffle(r.slice()); fillPile(r); });
+  return roundReady;
+}
 
 // ---------------- camera framing (fits any screen, incl. a phone in landscape) ----------------
 const fitPoints = [];
@@ -145,7 +169,6 @@ for (const root of [box, board]) {
   for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z]) fitPoints.push(new THREE.Vector3(x, y, z));
 }
 fitPoints.push(revealPoint.clone().add(new THREE.Vector3(0, 0.4, 0)));
-for (const x of [-0.4, 0.4]) fitPoints.push(BOX_AT.clone().add(new THREE.Vector3(x, 1.3, -0.5)));  // open lid
 const lookAt = new THREE.Box3().setFromPoints(fitPoints).getCenter(new THREE.Vector3());
 lookAt.y = 0.25;
 const viewDir = new THREE.Vector3(0, 2.3, 1.0).normalize();
@@ -185,18 +208,47 @@ function play(name) {
   return wait(clips[name].duration);
 }
 
+// ---------------- the felt door and the jumble inside ----------------
+// The lid has a square hole closed by four felt flaps (a cross cut). Objects wait in a jumble
+// inside; one is pulled up through the flaps, which bend open as it passes, so you glimpse the rest.
+const flaps = [0, 1, 2, 3].map(k => box.getObjectByName('flap_' + k));
+const flapRest = flaps.map(f => f.quaternion.clone());
+let flapOpen = 0;
+const flapAxis = new THREE.Vector3(1, 0, 0), flapQ = new THREE.Quaternion();
+function setFlaps(f) {
+  flapOpen = f;
+  flaps.forEach((fl, i) => fl.quaternion.copy(flapRest[i]).multiply(flapQ.setFromAxisAngle(flapAxis, FLAP_SIGN * f * 1.3)));
+}
+const flapsTo = (f, seconds) => { const f0 = flapOpen; return tween(seconds, t => setFlaps(f0 + (f - f0) * ease(t))); };
+const FLAP_SIGN = -1;   // flaps lift up and outwards
+const PILE_FLOOR = 0.1;          // inside floor height of the box
+const holeBelow = BOX_AT.clone().add(new THREE.Vector3(0, 0.25, 0));
+function fillPile(items) {
+  const spots = shuffle([[-0.16, -0.12], [0, -0.14], [0.16, -0.1], [-0.15, 0.12], [0.02, 0.13], [0.17, 0.12]]);
+  items.forEach((it, i) => {
+    const [x, z] = spots[i % spots.length];
+    it.pileAt = BOX_AT.clone().add(new THREE.Vector3(x + (Math.random() - 0.5) * 0.04, PILE_FLOOR + (i % 2) * 0.03, z));
+    it.node.position.copy(it.pileAt); it.node.rotation.set(0, Math.random() * Math.PI * 2, 0);
+    it.node.scale.setScalar(0.85); it.node.visible = true; it.placed = false;
+  });
+}
+
 // ---------------- game flow ----------------
 let state = 'idle';           // idle | busy | waiting | dragging
 let current = null, tries = 0, lastActive = 0, clock = 0;
-let queue = shuffle(items.slice());
+let queue = [];
+newRound();
 
 async function reveal() {
   state = 'busy';
+  await roundReady;
   current = queue.pop(); tries = 0;
-  await play('open');
   const n = current.node;
-  n.position.copy(insideBox); n.scale.setScalar(0.6); n.visible = true;
+  // ease up out of the jumble to just under the felt, then up through the flaps
+  await moveTo(n, holeBelow.clone().setY(holeBelow.y - current.height * 0.4), 0.85, 0.7);
+  flapsTo(1, 0.9);
   await moveTo(n, shownPos(current), REVEAL_SCALE, 1.4);
+  flapsTo(0, 1.2);
   say(current.word);
   state = 'waiting';
 }
@@ -215,8 +267,8 @@ async function drop() {
     await moveTo(n, slots[best], PLACED_SCALE, 0.7, 0.1);
     it.placed = true; current = null;
     say(`${it.letter}. ${it.word}`);
-    await play('close');
-    if (items.every(i => i.placed)) return finish();
+    await wait(0.4);
+    if (round.every(i => i.placed)) return finish();
     state = 'idle'; lastActive = clock;
   } else {
     tries++;
@@ -230,14 +282,15 @@ async function drop() {
 async function finish() {
   state = 'busy';
   await wait(2.5);
-  await play('open');
-  for (const it of items) {
-    await moveTo(it.node, aboveBox, 0.8, 1.0, 0.25);
-    await moveTo(it.node, insideBox, 0.6, 0.6);
+  // everything goes back in through the felt, then a fresh set is waiting inside
+  for (const it of round) {
+    await moveTo(it.node, aboveBox, 0.85, 1.0, 0.25);
+    flapsTo(1, 0.5);
+    await moveTo(it.node, holeBelow, 0.85, 0.7);
     it.node.visible = false; it.placed = false;
+    await flapsTo(0, 0.6);
   }
-  await play('close');
-  queue = shuffle(items.slice());
+  await newRound();
   state = 'idle'; lastActive = clock;
 }
 
@@ -316,7 +369,11 @@ renderer.setAnimationLoop(now => {
     t.glow += (pulse - t.glow) * Math.min(1, dt * 4);
     for (const m of t.mats) m.emissiveIntensity = t.glow * 0.45;
   }
-  if (state === 'idle' && clock - lastActive > HINT_EVERY) { lastActive = clock; play('hint'); }
+  // the shown object turns slowly so it can be seen from all sides; it holds still while carried
+  if (current && current.node.visible && state !== 'dragging' && !current.placed) current.node.rotation.y += dt * 2 * Math.PI / SPIN_SECONDS;
+  if (state === 'idle' && clock - lastActive > HINT_EVERY) {   // the felt stirs a little, inviting a tap
+    lastActive = clock; flapsTo(0.12, 0.8).then(() => state === 'idle' && flapsTo(0, 1.0));
+  }
   renderer.render(scene, camera);
 });
 
@@ -327,3 +384,4 @@ window.__mb = { get state() { return state; }, get current() { return current &&
   slotScreen(ch) { return this.screenOf(slots[ch]); },
   currentScreen() { const n = current.node; return this.screenOf(n.position.clone().setY(n.position.y + current.height * n.scale.x / 2)); },
   boxScreen() { return this.screenOf(BOX_AT.clone().setY(0.4)); } };
+window.__mb.debugFlaps = () => flaps.map(f => { const v = f.getWorldPosition(new THREE.Vector3()); return [f.name, f.parent && f.parent.name, +v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2)]; });

@@ -8,7 +8,9 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg">
 <style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #d9d2c5; overscroll-behavior: none; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #d9d2c5; overscroll-behavior: none;
+         -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: none; }
+  button { touch-action: manipulation; }
   canvas { display: block; width: 100vw; height: 100dvh; touch-action: none; -webkit-user-select: none; user-select: none; }
   #ver { position: fixed; right: 10px; bottom: 6px; font: 11px system-ui, sans-serif; color: #8d8577; pointer-events: none; }
   #full { position: fixed; right: 10px; top: 10px; width: 40px; height: 40px; border: 0; border-radius: 12px;
@@ -25,7 +27,12 @@
 <button id="case" aria-label="Capitals or small letters">ABC</button>
 <button id="sound" aria-label="Sound on or off">🔊</button>
 <button id="full" aria-label="Full screen">⛶</button>
-<div id="ver">v1.2.0</div>
+<div id="ver">v1.3.0</div>
+<script>
+  // iPad/iPhone Safari: no pinch or double-tap zoom, no page bounce, no long-press menu
+  for (const ev of ['gesturestart', 'gesturechange', 'gestureend', 'dblclick', 'contextmenu']) document.addEventListener(ev, e => e.preventDefault(), { passive: false });
+  document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+</script>
 <script type="module" src="main.js"></script>
 </body>
 </html>
