@@ -30,6 +30,7 @@ const OBJECTS = [
   { name: 'wateringcan', letter: 'W', word: 'watering can' },
   { name: 'xray', letter: 'X', word: 'X-ray' },
   { name: 'yak', letter: 'Y', word: 'yak' },
+  { name: 'zebra', letter: 'Z', word: 'zebra' },
 ];
 const ROUND_SIZE = 6;
 const SPIN_SECONDS = 7;     // one slow turn while the object waits to be dragged
@@ -184,6 +185,7 @@ const SETUP_DEFAULTS = {
   rock: {size: 1.2, turn: 20, tiltX: 0, tiltZ: 0, lift: 0.045, offX: 0, offZ: 0},
   spoon: {size: 1.6, turn: 53, tiltX: 12, tiltZ: 0, lift: 0.06, offX: -0.005, offZ: 0},
   table: {size: 1, turn: 175, tiltX: 0, tiltZ: 0, lift: 0, offX: 0, offZ: 0},
+  zebra: {size: 1.6, turn: 90, tiltX: -50, tiltZ: 0, lift: 0.06, offX: 0, offZ: 0.08},
   umbrella: {size: 1.45, turn: 26, tiltX: 0, tiltZ: 0, lift: 0.08, offX: 0.01, offZ: 0.01},
   vase: {size: 1.6, turn: 0, tiltX: -3, tiltZ: 0, lift: 0, offX: 0, offZ: 0},
   wateringcan: {size: 1.9, turn: 314, tiltX: 0, tiltZ: 0, lift: 0.04, offX: -0.035, offZ: 0.045},
