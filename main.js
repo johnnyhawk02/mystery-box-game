@@ -32,7 +32,7 @@ const BOX_AT = new THREE.Vector3(-2.2, 0, -0.15);
 const BOX_SCALE = 0.85;
 const BOARD_AT = new THREE.Vector3(0, 0, -0.15);
 const REVEAL_SCALE = 2.3;   // objects are shown big when they come out of the box
-const DRAG_SCALE = 1.35;
+const DRAG_SCALE = REVEAL_SCALE;   // stays big while carried; shrinks only when it settles in its slot
 const PLACED_SCALE = 1.2;  // a little bigger in the slot so it's easy to see
 const DRAG_Y = 0.32;        // height objects float at while being dragged
 const DROP_RADIUS = 0.3;    // how close to a slot counts as dropping on it
@@ -145,13 +145,26 @@ caseBtn.addEventListener('click', () => {
   try { localStorage.setItem('mb-case', lowerCase ? 'lower' : 'upper'); } catch (e) {}
 });
 
-// ---------------- grown-ups' size settings ----------------
-// Per-object size multipliers. SIZE_DEFAULTS can be filled from the panel's "Copy" output.
-const SIZE_DEFAULTS = {};
-let sizes = {};
-try { sizes = JSON.parse(localStorage.getItem('mb-sizes') || '{}'); } catch (e) {}
-const sizeOf = name => sizes[name] ?? SIZE_DEFAULTS[name] ?? 1;
-function saveSizes() { try { localStorage.setItem('mb-sizes', JSON.stringify(sizes)); } catch (e) {} }
+// ---------------- grown-ups' setup: size, turn, tilt and lift per object ----------------
+// SETUP_DEFAULTS can be filled from the setup panel's "Copy" output to make them the same on every device.
+const SETUP_DEFAULTS = {};
+const BLANK = { size: 1, turn: 0, tiltX: 0, tiltZ: 0, lift: 0 };
+let setup = {};
+try {
+  setup = JSON.parse(localStorage.getItem('mb-setup') || '{}');
+  const old = JSON.parse(localStorage.getItem('mb-sizes') || '{}');   // sizes saved by v1.4
+  for (const [k, v] of Object.entries(old)) setup[k] = { ...(setup[k] || {}), size: setup[k]?.size ?? v };
+} catch (e) {}
+const setupOf = name => ({ ...BLANK, ...(SETUP_DEFAULTS[name] || {}), ...(setup[name] || {}) });
+const sizeOf = name => setupOf(name).size;
+function saveSetup() { try { localStorage.setItem('mb-setup', JSON.stringify(setup)); localStorage.removeItem('mb-sizes'); } catch (e) {} }
+const DEG = Math.PI / 180;
+function applySetup(it) {
+  const c = setupOf(it.name);
+  it.inner.scale.setScalar(c.size);
+  it.inner.rotation.set(c.tiltX * DEG, c.turn * DEG, c.tiltZ * DEG, 'YXZ');
+  it.inner.position.y = c.lift;
+}
 
 // objects load only when a round needs them, so the game starts fast on a phone
 const loaded = {};
@@ -161,8 +174,8 @@ function getItem(o) {
     const node = new THREE.Group(), inner = new THREE.Group(); inner.add(g.scene); node.add(inner); shadowy(node);
     node.visible = false; scene.add(node);
     const baseHeight = new THREE.Box3().setFromObject(node).getSize(new THREE.Vector3()).y;
-    inner.scale.setScalar(sizeOf(o.name));
-    return { ...o, node, inner, baseHeight, placed: false, get height() { return this.baseHeight * sizeOf(this.name); } };
+    const it = { ...o, node, inner, baseHeight, placed: false, get height() { return this.baseHeight * sizeOf(this.name); } };
+    applySetup(it); return it;
   });
 }
 let round = [], roundReady = null;
@@ -181,8 +194,20 @@ for (const root of [box, board]) {
 fitPoints.push(revealPoint.clone().add(new THREE.Vector3(0, 0.4, 0)));
 const lookAt = new THREE.Box3().setFromPoints(fitPoints).getCenter(new THREE.Vector3());
 lookAt.y = 0.25;
-const viewDir = new THREE.Vector3(0, 2.3, 1.0).normalize();
+// camera: tilt (degrees above the table), turn, zoom and pan, all adjustable in setup
+const CAMERA_DEFAULTS = {};
+const CAM_BLANK = { tilt: 66, turn: 0, zoom: 1, panX: 0, panZ: 0 };
+let camSet = {};
+try { camSet = JSON.parse(localStorage.getItem('mb-camera') || '{}'); } catch (e) {}
+const cam = () => ({ ...CAM_BLANK, ...CAMERA_DEFAULTS, ...camSet });
+function saveCam() { try { localStorage.setItem('mb-camera', JSON.stringify(camSet)); } catch (e) {} }
+const viewDir = new THREE.Vector3();
+const baseLook = lookAt.clone();
 function fit() {
+  const c = cam();
+  viewDir.set(Math.sin(c.turn * Math.PI / 180) * Math.cos(c.tilt * Math.PI / 180), Math.sin(c.tilt * Math.PI / 180),
+              Math.cos(c.turn * Math.PI / 180) * Math.cos(c.tilt * Math.PI / 180));
+  lookAt.copy(baseLook);
   const w = canvas.clientWidth, h = canvas.clientHeight;
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
@@ -205,6 +230,12 @@ function fit() {
     const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
     const up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
     lookAt.addScaledVector(right, (x0 + x1) / 2 * halfW).addScaledVector(up, ((y0 + y1) / 2 + 0.06) * halfH);
+    if (pass === 3) {   // grown-ups' framing on top of the automatic fit
+      const fwd = new THREE.Vector3(viewDir.x, 0, viewDir.z).normalize(), side = new THREE.Vector3(fwd.z, 0, -fwd.x);
+      const aim = lookAt.clone().addScaledVector(side, c.panX).addScaledVector(fwd, -c.panZ);
+      camera.position.copy(aim).addScaledVector(viewDir, hi / c.zoom); camera.lookAt(aim);
+      camera.updateMatrixWorld(); camera.updateProjectionMatrix();
+    }
   }
 }
 window.addEventListener('resize', fit);
@@ -257,6 +288,8 @@ async function reveal() {
   // ease up out of the jumble to just under the felt, then up through the flaps
   await moveTo(n, holeBelow.clone().setY(holeBelow.y - current.height * 0.4), 0.85, 0.7);
   flapsTo(1, 0.9);
+  { const r0 = n.rotation.y, r1 = Math.round(r0 / (2 * Math.PI)) * 2 * Math.PI;   // face its set-up angle as it comes out
+    tween(1.4, t => { n.rotation.y = r0 + (r1 - r0) * ease(t); }); }
   await moveTo(n, shownPos(current), REVEAL_SCALE, 1.4);
   flapsTo(0, 1.2);
   say(current.word);
@@ -274,6 +307,8 @@ async function drop() {
   }
   for (const t of Object.values(tiles)) t.target = 0;
   if (best === it.letter) {
+    const r0 = n.rotation.y, r1 = Math.round(r0 / (2 * Math.PI)) * 2 * Math.PI;   // settle at its set-up angle
+    tween(0.7, t => { n.rotation.y = r0 + (r1 - r0) * ease(t); });
     await moveTo(n, slots[best], PLACED_SCALE, 0.7, 0.1);
     it.placed = true; current = null;
     say(`${it.letter}. ${it.word}`);
@@ -410,54 +445,112 @@ window.__mb = { get state() { return state; }, get current() { return current &&
   boxScreen() { return this.screenOf(BOX_AT.clone().setY(0.4)); } };
 window.__mb.debugFlaps = () => flaps.map(f => { const v = f.getWorldPosition(new THREE.Vector3()); return [f.name, f.parent && f.parent.name, +v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2)]; });
 
-// ---------------- settings panel (long-press the small gear, so a child won't open it by accident) ----------------
-const gear = document.getElementById('gear'), panel = document.getElementById('panel'), rows = document.getElementById('rows');
-let pressTimer = null;
-gear.addEventListener('pointerdown', () => { pressTimer = setTimeout(openPanel, 800); });
+// ---------------- setup mode (long-press the faint gear, so a child won't open it by accident) ----------------
+// Every object sits in its letter slot. Tap one to pick it, then set its size, turn, tilt and lift.
+const gear = document.getElementById('gear'), panel = document.getElementById('panel');
+const pickName = document.getElementById('pickName'), controls = document.getElementById('controls');
+let pressTimer = null, picked = null, setupItems = [];
+gear.addEventListener('pointerdown', () => { pressTimer = setTimeout(enterSetup, 800); });
 for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) gear.addEventListener(ev, () => clearTimeout(pressTimer));
-let preview = null;   // the object being sized sits in its letter slot so you can judge it
-async function showPreview(o) {
-  const it = await getItem(o);
-  if (preview && preview.it !== it) endPreview();
-  if (!preview) preview = { it, pos: it.node.position.clone(), scale: it.node.scale.x, visible: it.node.visible, rot: it.node.rotation.y };
-  if (current === it) return;
-  it.node.visible = true;
-  if (current) { it.node.position.copy(slots[it.letter]); it.node.scale.setScalar(PLACED_SCALE); }   // shown spot is taken
-  else { it.node.position.copy(shownPos(it)); it.node.scale.setScalar(REVEAL_SCALE); }               // big, above the box
+const FIELDS = [
+  ['size', 'Size', 0.4, 2.5, 0.05, v => v.toFixed(2)],
+  ['turn', 'Turn', 0, 360, 1, v => v + '°'],
+  ['tiltX', 'Tilt fwd/back', -90, 90, 1, v => v + '°'],
+  ['tiltZ', 'Tilt sideways', -90, 90, 1, v => v + '°'],
+  ['lift', 'Lift', -0.1, 0.2, 0.005, v => v.toFixed(3)],
+];
+async function enterSetup() {
+  if (state === 'setup') return;
+  state = 'setup'; current = null; tweens.length = 0; setFlaps(0);
+  for (const t of Object.values(tiles)) t.target = 0;
+  for (const p of Object.values(loaded)) p.then(it => { it.node.visible = false; });
+  setupItems = await Promise.all(OBJECTS.map(getItem));
+  for (const it of setupItems) {
+    it.node.visible = true; it.node.position.copy(slots[it.letter]); it.node.scale.setScalar(PLACED_SCALE); it.node.rotation.set(0, 0, 0);
+  }
+  pick(null); showTab('object'); panel.hidden = false;
 }
-function endPreview() {
-  if (!preview) return;
-  const { it, pos, scale, visible, rot } = preview;
-  if (current !== it) { it.node.position.copy(pos); it.node.scale.setScalar(scale); it.node.visible = visible; it.node.rotation.y = rot; }
-  preview = null;
-}
-function setSize(o, v) {
-  sizes[o.name] = v; saveSizes();
-  if (loaded[o.name]) loaded[o.name].then(it => it.inner.scale.setScalar(v));
-}
-function buildRows() {
-  rows.innerHTML = '';
-  for (const o of OBJECTS) {
+function pick(it) {
+  picked = it;
+  for (const [ch, t] of Object.entries(tiles)) t.target = it && ch === it.letter ? 0.6 : 0;
+  pickName.textContent = it ? `${it.letter}  ${it.word}` : 'Tap an object on the board';
+  controls.innerHTML = '';
+  if (!it) return;
+  const c = setupOf(it.name);
+  for (const [key, label, min, max, step, fmt] of FIELDS) {
     const row = document.createElement('label'); row.className = 'row';
-    const v = sizeOf(o.name);
-    row.innerHTML = `<span class="nm">${o.letter} &nbsp;${o.word}</span><input type="range" min="0.4" max="2.5" step="0.05" value="${v}"><span class="val">${v.toFixed(2)}</span>`;
+    row.innerHTML = `<span class="nm">${label}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${c[key]}"><span class="val">${fmt(c[key])}</span>`;
     const input = row.querySelector('input'), val = row.querySelector('.val');
-    input.addEventListener('input', () => { const x = +input.value; val.textContent = x.toFixed(2); setSize(o, x); showPreview(o); });
-    input.addEventListener('pointerdown', () => showPreview(o));
-    rows.appendChild(row);
+    input.addEventListener('input', () => {
+      const v = +input.value; val.textContent = fmt(v);
+      setup[it.name] = { ...(setup[it.name] || {}), [key]: v }; saveSetup(); applySetup(it);
+    });
+    controls.appendChild(row);
   }
 }
-function openPanel() { buildRows(); panel.hidden = false; }
-document.getElementById('closePanel').addEventListener('click', () => { panel.hidden = true; endPreview(); });
-document.getElementById('resetSizes').addEventListener('click', () => {
-  sizes = {}; saveSizes();
-  for (const o of OBJECTS) if (loaded[o.name]) loaded[o.name].then(it => it.inner.scale.setScalar(sizeOf(o.name)));
-  buildRows();
+// in setup, a tap on the board picks the object in (or nearest to) that slot
+canvas.addEventListener('pointerdown', e => {
+  if (state !== 'setup') return;
+  pointer(e);
+  const hitObj = setupItems.find(it => ray.intersectObject(it.node, true).length > 0);
+  if (tab === 'camera') showTab('object');
+  if (hitObj) return pick(hitObj);
+  const hit = new THREE.Vector3();
+  if (ray.ray.intersectPlane(dragPlane, hit)) {
+    const ch = Object.keys(slots).find(k => Math.abs(hit.x - slots[k].x) < 0.2 && Math.abs(hit.z - (slots[k].z + 0.085)) < 0.25);
+    const it = ch && setupItems.find(i => i.letter === ch);
+    if (it) pick(it);
+  }
 });
-document.getElementById('copySizes').addEventListener('click', async () => {
-  const all = Object.fromEntries(OBJECTS.map(o => [o.name, +sizeOf(o.name).toFixed(2)]));
-  const text = JSON.stringify(all);
-  document.getElementById('sizesOut').value = text;
+document.getElementById('resetOne').addEventListener('click', () => {
+  if (tab === 'camera') { camSet = {}; saveCam(); fit(); return showTab('camera'); }
+  if (!picked) return;
+  delete setup[picked.name]; saveSetup(); applySetup(picked); pick(picked);
+});
+document.getElementById('resetAll').addEventListener('click', () => {
+  setup = {}; saveSetup(); setupItems.forEach(applySetup);
+  camSet = {}; saveCam(); fit(); showTab(tab);
+});
+document.getElementById('copySetup').addEventListener('click', async () => {
+  const changed = Object.fromEntries(OBJECTS.map(o => [o.name, setupOf(o.name)])
+    .filter(([, c]) => Object.keys(BLANK).some(k => c[k] !== BLANK[k])));
+  const text = JSON.stringify({ objects: changed, camera: cam() });
+  document.getElementById('setupOut').value = text;
   try { await navigator.clipboard.writeText(text); } catch (e) {}
+});
+const CAM_FIELDS = [
+  ['tilt', 'Tilt', 25, 89, 1, v => v + '°'],
+  ['turn', 'Turn', -60, 60, 1, v => v + '°'],
+  ['zoom', 'Zoom', 0.6, 2, 0.01, v => v.toFixed(2)],
+  ['panX', 'Left/right', -2, 2, 0.01, v => v.toFixed(2)],
+  ['panZ', 'Up/down', -1.5, 1.5, 0.01, v => v.toFixed(2)],
+];
+let tab = 'object';
+function showTab(t) {
+  tab = t;
+  document.getElementById('tabObject').classList.toggle('on', t === 'object');
+  document.getElementById('tabCamera').classList.toggle('on', t === 'camera');
+  if (t === 'object') return pick(picked);
+  for (const tt of Object.values(tiles)) tt.target = 0;
+  pickName.textContent = 'Camera';
+  controls.innerHTML = '';
+  const c = cam();
+  for (const [key, label, min, max, step, fmt] of CAM_FIELDS) {
+    const row = document.createElement('label'); row.className = 'row';
+    row.innerHTML = `<span class="nm">${label}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${c[key]}"><span class="val">${fmt(c[key])}</span>`;
+    const input = row.querySelector('input'), val = row.querySelector('.val');
+    input.addEventListener('input', () => { const v = +input.value; val.textContent = fmt(v); camSet[key] = v; saveCam(); fit(); });
+    controls.appendChild(row);
+  }
+}
+document.getElementById('tabObject').addEventListener('click', () => showTab('object'));
+document.getElementById('tabCamera').addEventListener('click', () => showTab('camera'));
+document.getElementById('flipPanel').addEventListener('click', () => panel.classList.toggle('right'));
+document.getElementById('closePanel').addEventListener('click', async () => {
+  panel.hidden = true; pick(null);
+  for (const it of setupItems) it.node.visible = false;
+  state = 'busy';
+  await newRound();          // back to the game with a fresh set in the box
+  state = 'idle'; lastActive = clock;
 });
 window.__mb.tileScreen = ch => window.__mb.screenOf(slots[ch].clone().setZ(slots[ch].z + 0.17));
