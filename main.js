@@ -231,7 +231,7 @@ const lookAt = new THREE.Box3().setFromPoints(fitPoints).getCenter(new THREE.Vec
 lookAt.y = 0.25;
 // camera: tilt (degrees above the table), turn, zoom and pan, all adjustable in setup
 const CAMERA_DEFAULTS = {tilt: 70, turn: 0, zoom: 1, panX: 0, panZ: 0.13, shown: 1.4};
-const CAM_BLANK = { tilt: 66, turn: 0, zoom: 1, panX: 0, panZ: 0, shown: 1.4 };
+const CAM_BLANK = { tilt: 66, turn: 0, zoom: 1, panX: 0, panZ: 0, shown: 1.4, reveal: 'beam' };   // reveal: 'beam' or 'box'
 let camSet = {};
 try { camSet = JSON.parse(localStorage.getItem('mb-camera') || '{}'); } catch (e) {}
 const cam = () => ({ ...CAM_BLANK, ...CAMERA_DEFAULTS, ...camSet });
@@ -302,6 +302,10 @@ const holeBelow = BOX_AT.clone().add(new THREE.Vector3(0, 0.25, 0));
 // inside the box everything is shrunk to fit, whatever its board size
 const pileScale = it => Math.min(0.85, 0.9 / sizeOf(it.name));
 function fillPile(items) {
+  if (cam().reveal === 'beam') {   // nothing waits in a box: objects shimmer into view on the pad
+    items.forEach(it => { it.node.visible = false; it.placed = false; it.node.rotation.set(0, 0, 0); });
+    return;
+  }
   const spots = shuffle([[-0.16, -0.12], [0, -0.14], [0.16, -0.1], [-0.15, 0.12], [0.02, 0.13], [0.17, 0.12]]);
   items.forEach((it, i) => {
     const [x, z] = spots[i % spots.length];
@@ -309,6 +313,67 @@ function fillPile(items) {
     it.node.position.copy(it.pileAt); it.node.rotation.set(0, Math.random() * Math.PI * 2, 0);
     it.node.scale.setScalar(pileScale(it)); it.node.visible = true; it.placed = false;
   });
+}
+
+// ---------------- shimmer: objects softly sparkle into (and out of) view ----------------
+const sparkTex = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+  const r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.35, 'rgba(255,250,235,0.55)'); r.addColorStop(1, 'rgba(255,250,235,0)');
+  g.fillStyle = r; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c);
+})();
+const shimmers = [];
+// a gently rising, twinkling column of soft light around an object, fading in, holding, fading out
+function shimmer(base, height, radius, seconds) {
+  const N = 220, pos = new Float32Array(N * 3), seed = [];
+  for (let i = 0; i < N; i++) {
+    const a = Math.random() * Math.PI * 2, r = radius * Math.sqrt(Math.random());
+    pos[i * 3] = Math.cos(a) * r; pos[i * 3 + 1] = Math.random() * height; pos[i * 3 + 2] = Math.sin(a) * r;
+    seed.push(0.6 + Math.random() * 0.8);
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const m = new THREE.PointsMaterial({ map: sparkTex, color: 0xfff1d6, size: 0.05, transparent: true, opacity: 0,
+    depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true });
+  const pts = new THREE.Points(g, m); pts.position.copy(base); scene.add(pts);
+  return new Promise(resolve => shimmers.push({ pts, t: 0, seconds, height, seed, resolve }));
+}
+function updateShimmers(dt) {
+  for (let i = shimmers.length - 1; i >= 0; i--) {
+    const s = shimmers[i]; s.t += dt;
+    const k = s.t / s.seconds, env = Math.min(1, k / 0.2) * Math.min(1, (1 - k) / 0.3);
+    s.pts.material.opacity = Math.max(0, env) * 0.85;
+    s.pts.material.size = 0.045 + 0.012 * Math.sin(clock * 3);
+    const p = s.pts.geometry.attributes.position;
+    for (let j = 0; j < p.count; j++) { let y = p.getY(j) + dt * 0.12 * s.seed[j]; if (y > s.height) y -= s.height; p.setY(j, y); }
+    p.needsUpdate = true;
+    if (k >= 1) { scene.remove(s.pts); s.pts.geometry.dispose(); s.pts.material.dispose(); shimmers.splice(i, 1); s.resolve(); }
+  }
+}
+// fade an object's materials (remembering which were see-through to begin with)
+function setFade(it, f) {
+  it.node.traverse(o => {
+    if (!o.isMesh) return;
+    for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+      if (m.userData.baseOpacity === undefined) { m.userData.baseOpacity = m.opacity; m.userData.baseTransparent = m.transparent; }
+      m.opacity = m.userData.baseOpacity * f; m.transparent = f < 1 || m.userData.baseTransparent; m.depthWrite = f >= 1 && !m.userData.baseTransparent;
+      m.needsUpdate = true;
+    }
+  });
+}
+async function beamIn(it, at, scale) {
+  const n = it.node; n.position.copy(at); n.scale.setScalar(scale); n.rotation.set(0, 0, 0);
+  setFade(it, 0); n.visible = true;
+  const h = it.height * scale, r = Math.max(0.12, h * 0.45);
+  const glow = shimmer(at.clone(), h * 1.25, r, 2.8);
+  await tween(2.2, t => { const f = ease(Math.min(1, Math.max(0, (t - 0.2) / 0.8))); setFade(it, f); n.scale.setScalar(scale * (0.96 + 0.04 * f)); });
+  setFade(it, 1);
+  return glow;
+}
+async function beamOut(it) {
+  const n = it.node, s = n.scale.x, h = it.height * s;
+  shimmer(n.position.clone(), h * 1.25, Math.max(0.1, h * 0.45), 2.4);
+  await tween(1.8, t => setFade(it, 1 - ease(Math.min(1, t / 0.9))));
+  n.visible = false; setFade(it, 1);
 }
 
 // a very gentle hint: the tile (and its letter) lifts a few millimetres, rocks a touch and settles
@@ -325,6 +390,25 @@ function nudge(ch) {
 let state = 'idle';           // idle | busy | waiting | dragging
 let current = null, tries = 0, lastActive = 0, clock = 0;
 let queue = [];
+// ---------------- the pad (shimmer mode): a soft round platform she presses ----------------
+const PAD_AT = BOX_AT.clone().add(new THREE.Vector3(0.05, 0, -0.22));   // a little further up the screen than the box
+const pad = new THREE.Group(); pad.position.copy(PAD_AT); scene.add(pad);
+const PAD_TOP = 0.11;
+{
+  const mat = (c, r = 0.6) => new THREE.MeshStandardMaterial({ color: c, roughness: r });
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.47, 0.08, 64), mat('#9fbfa8')); base.position.y = 0.04;
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.022, 16, 96), new THREE.MeshStandardMaterial({ color: '#f6e7c4', emissive: '#ffd98a', emissiveIntensity: 0.3, roughness: 0.4 }));
+  rim.rotation.x = Math.PI / 2; rim.position.y = 0.085;
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.03, 64), mat('#f1ead9', 0.5)); top.position.y = 0.095;
+  for (const m of [base, rim, top]) { m.castShadow = m.receiveShadow = true; pad.add(m); }
+  pad.userData = { rim, top };
+}
+function applyRevealMode() { const beam = cam().reveal === 'beam'; pad.visible = beam; box.visible = !beam; }
+applyRevealMode();
+function pressPad() {   // the top dips a little under her finger and springs back
+  const top = pad.userData.top;
+  return tween(0.5, t => { top.position.y = 0.095 - 0.018 * Math.sin(Math.PI * t); });
+}
 newRound();
 
 async function reveal() {
@@ -332,6 +416,11 @@ async function reveal() {
   await roundReady;
   current = queue.pop(); tries = 0;
   const n = current.node;
+  if (cam().reveal === 'beam') {   // shimmer into view on the pad
+    pressPad();
+    await beamIn(current, shownPos(current), revealScale());
+    say(current.word); state = 'waiting'; return;
+  }
   // the lid swings fully open (felt flaps part too), the object eases up and out, then the lid closes
   flapsTo(1, 0.9);
   await Promise.all([play('open'), moveTo(n, holeBelow.clone().setY(holeBelow.y - 0.05), pileScale(current), 1.0)]);
@@ -342,7 +431,9 @@ async function reveal() {
   say(current.word);
   state = 'waiting';
 }
-const shownPos = it => revealPoint.clone().add(new THREE.Vector3(0, 0.18 - it.height * revealScale() / 2, 0));
+const shownPos = it => cam().reveal === 'beam'
+  ? PAD_AT.clone().setY(PAD_TOP + 0.03)                                         // standing on the pad
+  : revealPoint.clone().add(new THREE.Vector3(0, 0.18 - it.height * revealScale() / 2, 0));
 
 async function drop() {
   state = 'busy';
@@ -375,6 +466,11 @@ async function drop() {
 async function finish() {
   state = 'busy';
   await wait(2.5);
+  if (cam().reveal === 'beam') {   // everything softly shimmers away, then a fresh set is ready
+    await Promise.all(round.map(it => beamOut(it)));
+    round.forEach(it => { it.placed = false; });
+    await newRound(); state = 'idle'; lastActive = clock; return;
+  }
   // everything goes back in through the felt, then a fresh set is waiting inside
   flapsTo(1, 0.8); await play('open');
   for (const it of round) {
@@ -407,7 +503,8 @@ function screenDist(e, worldPos) {
 canvas.addEventListener('pointerdown', e => {
   pointer(e); lastActive = clock;
   if (state === 'idle') {
-    const hitBox = ray.intersectObject(box, true).length > 0 || screenDist(e, BOX_AT.clone().setY(0.4)) < 90;
+    const target = cam().reveal === 'beam' ? pad : box;
+    const hitBox = ray.intersectObject(target, true).length > 0 || screenDist(e, cam().reveal === 'beam' ? PAD_AT.clone().setY(0.1) : BOX_AT.clone().setY(0.4)) < 90;
     if (hitBox) reveal();
   } else if (state === 'waiting' && current) {
     const centre = current.node.position.clone().setY(current.node.position.y + current.height * current.node.scale.x / 2);
@@ -445,7 +542,7 @@ canvas.addEventListener('pointercancel', endDrag);
 let last = performance.now();
 renderer.setAnimationLoop(now => {
   const dt = Math.min((now - last) / 1000, 0.05); last = now; clock += dt;
-  mixer.update(dt);
+  mixer.update(dt); updateShimmers(dt);
   for (let i = tweens.length - 1; i >= 0; i--) {
     const tw = tweens[i]; tw.t += dt / tw.seconds; tw.step(Math.min(tw.t, 1));
     if (tw.t >= 1) { tweens.splice(i, 1); tw.resolve(); }
@@ -478,7 +575,9 @@ renderer.setAnimationLoop(now => {
   }
   // the shown object turns slowly so it can be seen from all sides; it holds still while carried
   if (current && current.node.visible && state !== 'dragging' && !current.placed) current.node.rotation.y += dt * 2 * Math.PI / SPIN_SECONDS;
-  if (state === 'idle' && clock - lastActive > HINT_EVERY) {   // the felt stirs a little, inviting a tap
+  // the pad's rim breathes softly; a little brighter while it's waiting to be pressed
+  pad.userData.rim.material.emissiveIntensity = (state === 'idle' ? 0.35 : 0.15) + 0.2 * (0.5 + 0.5 * Math.sin(clock * 1.6));
+  if (state === 'idle' && clock - lastActive > HINT_EVERY && cam().reveal === 'box') {   // the felt stirs a little, inviting a tap
     lastActive = clock; flapsTo(0.12, 0.8).then(() => state === 'idle' && flapsTo(0, 1.0));
   }
   renderer.render(scene, camera);
@@ -490,7 +589,7 @@ window.__mb = { get state() { return state; }, get current() { return current &&
     return { x: (p.x + 1) / 2 * r.width + r.left, y: (1 - p.y) / 2 * r.height + r.top }; },
   slotScreen(ch) { return this.screenOf(slots[ch]); },
   currentScreen() { const n = current.node; return this.screenOf(n.position.clone().setY(n.position.y + current.height * n.scale.x / 2)); },
-  boxScreen() { return this.screenOf(BOX_AT.clone().setY(0.4)); } };
+  boxScreen() { return this.screenOf(cam().reveal === 'beam' ? PAD_AT.clone().setY(0.1) : BOX_AT.clone().setY(0.4)); } };
 window.__mb.debugFlaps = () => flaps.map(f => { const v = f.getWorldPosition(new THREE.Vector3()); return [f.name, f.parent && f.parent.name, +v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2)]; });
 
 // ---------------- setup mode (long-press the faint gear, so a child won't open it by accident) ----------------
@@ -597,6 +696,14 @@ function showTab(t) {
     input.addEventListener('input', () => { const v = +input.value; val.textContent = fmt(v); camSet[key] = v; saveCam(); fit(); });
     controls.appendChild(row);
   }
+  // how objects appear: shimmer onto the pad, or lifted out of the box
+  const row = document.createElement('div'); row.className = 'row';
+  row.innerHTML = `<span class="nm">Appear by</span><span><button data-v="beam">Pad</button> <button data-v="box">Box</button></span><span></span>`;
+  for (const btn of row.querySelectorAll('button')) {
+    btn.className = c.reveal === btn.dataset.v ? 'on' : '';
+    btn.addEventListener('click', () => { camSet.reveal = btn.dataset.v; saveCam(); applyRevealMode(); showTab('camera'); });
+  }
+  controls.appendChild(row);
 }
 document.getElementById('tabObject').addEventListener('click', () => showTab('object'));
 document.getElementById('tabCamera').addEventListener('click', () => showTab('camera'));
