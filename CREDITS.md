@@ -26,5 +26,7 @@ Models from [BlendSwap](https://www.blendswap.com), converted for the game (reco
 
 - **Fish** (F): fish model (Fish.fbx, "pez_02" textures), downloaded by Johnny (source/licence to confirm).
 
+- **Yak** (Y): "snowy yak / ox" model (Meshy AI highland yak), downloaded by Johnny (source/licence to confirm).
+
 Everything else (box with felt door, board, football (used as the B ball), the square table, the grey rock, the metal spoon, the umbrella) was made for this game in `blender/build_game_models.py`.
 Three.js is MIT licensed (`vendor/THREE-LICENSE`).
