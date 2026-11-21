@@ -274,6 +274,16 @@ function fillPile(items) {
   });
 }
 
+// a very gentle hint: the tile (and its letter) lifts a few millimetres, rocks a touch and settles
+function nudge(ch) {
+  const parts = ['tile_', 'upper_', 'lower_'].map(k => board.getObjectByName(k + ch));
+  const base = parts.map(o => ({ y: o.position.y, rz: o.rotation.z }));
+  return tween(1.6, t => parts.forEach((o, i) => {
+    o.position.y = base[i].y + 0.03 * Math.sin(Math.PI * t);
+    o.rotation.z = base[i].rz + 0.035 * Math.sin(2 * Math.PI * t) * (1 - t);
+  }));
+}
+
 // ---------------- game flow ----------------
 let state = 'idle';           // idle | busy | waiting | dragging
 let current = null, tries = 0, lastActive = 0, clock = 0;
@@ -317,6 +327,7 @@ async function drop() {
     state = 'idle'; lastActive = clock;
   } else {
     tries++;
+    nudge(it.letter);   // the right tile gives a tiny, slow lift-and-settle
     await moveTo(n, shownPos(it), REVEAL_SCALE, 1.0, 0.35);
     if (tries >= 2) tiles[it.letter].target = 1;   // gentle prompt: the right letter softly glows
     say(it.word);
