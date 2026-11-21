@@ -149,7 +149,35 @@ caseBtn.addEventListener('click', () => {
 
 // ---------------- grown-ups' setup: size, turn, tilt and lift per object ----------------
 // SETUP_DEFAULTS can be filled from the setup panel's "Copy" output to make them the same on every device.
-const SETUP_DEFAULTS = {};
+// Johnny's settings from 2026-11-21. Bump DEFAULTS_ID when these change: devices then drop their own
+// saved tweaks so everyone starts from the same defaults.
+const DEFAULTS_ID = '2026-11-21a';
+try { if (localStorage.getItem('mb-defaults') !== DEFAULTS_ID) {
+  localStorage.removeItem('mb-setup'); localStorage.removeItem('mb-sizes'); localStorage.removeItem('mb-camera');
+  localStorage.setItem('mb-defaults', DEFAULTS_ID);
+} } catch (e) {}
+const SETUP_DEFAULTS = {
+  apple: {size: 1.5, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
+  ball: {size: 1.9, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
+  cup: {size: 1.6, turn: 319, tiltX: 0, tiltZ: 0, lift: 0.035},
+  duck: {size: 1.25, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
+  egg: {size: 1.45, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
+  fish: {size: 1.2, turn: 320, tiltX: 0, tiltZ: 0, lift: 0},
+  gloves: {size: 1.55, turn: 0, tiltX: 0, tiltZ: 0, lift: 0.05},
+  hat: {size: 1.65, turn: 0, tiltX: -19, tiltZ: 0, lift: 0.05},
+  jug: {size: 1.7, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
+  kiwi: {size: 1.45, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
+  lemon: {size: 1.5, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
+  microscope: {size: 2.1, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
+  onion: {size: 1.7, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
+  pear: {size: 1.3, turn: 0, tiltX: -10, tiltZ: 0, lift: 0.055},
+  rock: {size: 1.15, turn: 66, tiltX: 0, tiltZ: 0, lift: 0.045},
+  spoon: {size: 1.35, turn: 52, tiltX: 0, tiltZ: 0, lift: 0.05},
+  television: {size: 1.05, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
+  ukulele: {size: 1.8, turn: 0, tiltX: -3, tiltZ: 1, lift: 0.145},
+  vase: {size: 1.6, turn: 0, tiltX: -3, tiltZ: 0, lift: 0},
+  wateringcan: {size: 1.9, turn: 314, tiltX: 0, tiltZ: 0, lift: 0.04},
+};
 const BLANK = { size: 1, turn: 0, tiltX: 0, tiltZ: 0, lift: 0 };
 let setup = {};
 try {
@@ -197,7 +225,7 @@ fitPoints.push(revealPoint.clone().add(new THREE.Vector3(0, 0.4, 0)));
 const lookAt = new THREE.Box3().setFromPoints(fitPoints).getCenter(new THREE.Vector3());
 lookAt.y = 0.25;
 // camera: tilt (degrees above the table), turn, zoom and pan, all adjustable in setup
-const CAMERA_DEFAULTS = {};
+const CAMERA_DEFAULTS = {tilt: 49, turn: 0, zoom: 1.15, panX: 0, panZ: -0.14};
 const CAM_BLANK = { tilt: 66, turn: 0, zoom: 1, panX: 0, panZ: 0 };
 let camSet = {};
 try { camSet = JSON.parse(localStorage.getItem('mb-camera') || '{}'); } catch (e) {}
