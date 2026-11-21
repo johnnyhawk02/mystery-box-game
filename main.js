@@ -166,7 +166,7 @@ caseBtn.addEventListener('click', () => {
 // SETUP_DEFAULTS can be filled from the setup panel's "Copy" output to make them the same on every device.
 // Johnny's settings from 2026-11-21 (evening). Bump DEFAULTS_ID when these change: devices then drop their own
 // saved tweaks so everyone starts from the same defaults.
-const DEFAULTS_ID = '2026-11-21k';
+const DEFAULTS_ID = '2026-11-21l';
 try { if (localStorage.getItem('mb-defaults') !== DEFAULTS_ID) {
   localStorage.removeItem('mb-setup'); localStorage.removeItem('mb-sizes'); localStorage.removeItem('mb-camera');
   localStorage.setItem('mb-defaults', DEFAULTS_ID);
@@ -248,7 +248,7 @@ for (const dx of [-0.45, 0.45]) fitPoints.push(revealPoint.clone().add(new THREE
 const lookAt = new THREE.Box3().setFromPoints(fitPoints).getCenter(new THREE.Vector3());
 lookAt.y = 0.25;
 // camera: tilt (degrees above the table), turn, zoom and pan, all adjustable in setup
-const CAMERA_DEFAULTS = {tilt: 70, turn: 0, zoom: 1.08, panX: 0.43, panZ: -0.05, shown: 1.55, reveal: 'beam'};
+const CAMERA_DEFAULTS = {tilt: 70, turn: -13, zoom: 1.35, panX: 0.12, panZ: -0.05, shown: 1.55, reveal: 'beam'};
 const CAM_BLANK = { tilt: 66, turn: 0, zoom: 1, panX: 0, panZ: 0, shown: 1.4, reveal: 'beam' };   // reveal: 'beam' or 'box'
 let camSet = {};
 try { camSet = JSON.parse(localStorage.getItem('mb-camera') || '{}'); } catch (e) {}
