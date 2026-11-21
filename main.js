@@ -387,8 +387,12 @@ function setFade(it, f) {
     if (!o.isMesh) return;
     for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
       if (m.userData.baseOpacity === undefined) { m.userData.baseOpacity = m.opacity; m.userData.baseTransparent = m.transparent; }
-      m.opacity = m.userData.baseOpacity * f; m.transparent = f < 1 || m.userData.baseTransparent; m.depthWrite = f >= 1 && !m.userData.baseTransparent;
-      m.needsUpdate = true;
+      // fade with a fine 'hashed' see-through pattern rather than blending: it keeps the object's own depth
+      // order, so no faces go missing while it appears (blended fading lost some top faces)
+      const fading = f < 1 && !m.userData.baseTransparent;
+      m.opacity = m.userData.baseOpacity * f;
+      if (m.alphaHash !== fading) { m.alphaHash = fading; m.needsUpdate = true; }
+      m.transparent = !!m.userData.baseTransparent; m.depthWrite = !m.userData.baseTransparent;
     }
   });
 }
