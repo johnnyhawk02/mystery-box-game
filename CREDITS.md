@@ -12,7 +12,7 @@ Models from [Poly Haven](https://polyhaven.com) (CC0, public domain), trimmed an
 - **pear** (P): "Pears Asian 01" by Amal Kumar, CC0. https://polyhaven.com/a/food_pears_asian_01
 - **rock** (R): "Rock 07" by Jenelle van Heerden, CC0. https://polyhaven.com/a/rock_07
 - **spoon** (S): "Wooden Spoon" by Ronnie Barter, CC0. https://polyhaven.com/a/wooden_spoon
-- **teapot** (T): from "Tea Set 01" by James Ray Cock (texturing), Rico Cilliers (modeling), Jurita Burger (graphic design), CC0. https://polyhaven.com/a/tea_set_01
+- **table** (T): "Small Wooden Table 01" by Ulan Cabanilla, CC0. https://polyhaven.com/a/small_wooden_table_01
 - **ukulele** (U): "Ukulele 01" by Joseph Burgan, CC0. https://polyhaven.com/a/Ukulele_01
 - **vase** (V): "Ceramic Vase 01" by James Ray Cock, CC0. https://polyhaven.com/a/ceramic_vase_01
 - **watering can** (W): "Watering Can Metal 01" by Charles Nderitu, CC0. https://polyhaven.com/a/watering_can_metal_01
@@ -23,6 +23,8 @@ Models from [BlendSwap](https://www.blendswap.com), converted for the game (reco
 - **Apple** (A): "RedYellow Apple textured for Eevee and Cycles", from BlendSwap. Author and licence to be confirmed.
 - **Egg** (E): "The Egg", Blend Swap #80990, CC-BY 3.0, by the original uploader (credited as required). https://www.blendswap.com/blends/view/80990
 - **Coffee mug** (C): "Coffee Mug", from BlendSwap. Author and licence to be confirmed.
+
+The monkey (M) is Blender's built-in monkey head, coloured for the game in `blender/build_monkey.py`.
 
 Everything else (box with felt door, board, fish) was made for this game in `blender/build_game_models.py`.
 Three.js is MIT licensed (`vendor/THREE-LICENSE`).
