@@ -3,6 +3,7 @@
 Models from [Poly Haven](https://polyhaven.com) (CC0, public domain), trimmed and resized for the game:
 
 - **ball** (B): "Baseball 01" by Rico Cilliers, CC0. https://polyhaven.com/a/baseball_01
+- **cake** (C): "Strawberry Chocolate Cake" from Poly Haven, CC0. https://polyhaven.com/a/strawberry_chocolate_cake
 - **gloves** (G): "Garden Gloves 01" by Satyaki Mandal, CC0. https://polyhaven.com/a/garden_gloves_01
 - **hat** (H): "Fishermans Hat" by PierreB3D, CC0. https://polyhaven.com/a/fishermans_hat
 - **jug** (J): "Jug 01" by Kuutti Siitonen, CC0. https://polyhaven.com/a/jug_01
@@ -22,9 +23,7 @@ Models from [BlendSwap](https://www.blendswap.com), converted for the game (reco
 - **Rubber duck** (D): "Rubber Duck" by mStuff, CC0 (public domain). https://www.blendswap.com/blends/view/69071
 - **Apple** (A): "RedYellow Apple textured for Eevee and Cycles", from BlendSwap. Author and licence to be confirmed.
 - **Egg** (E): "The Egg", Blend Swap #80990, CC-BY 3.0, by the original uploader (credited as required). https://www.blendswap.com/blends/view/80990
-- **Coffee mug** (C): "Coffee Mug", from BlendSwap. Author and licence to be confirmed.
-
-The monkey (M) is Blender's built-in monkey head, coloured for the game in `blender/build_monkey.py`.
+- **Coffee mug** (M, "mug"): "Coffee Mug", from BlendSwap. Author and licence to be confirmed.
 
 Everything else (box with felt door, board, fish) was made for this game in `blender/build_game_models.py`.
 Three.js is MIT licensed (`vendor/THREE-LICENSE`).

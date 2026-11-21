@@ -45,18 +45,18 @@
 <button id="full" aria-label="Full screen">⛶</button>
 <button id="gear" aria-label="Settings (press and hold)">⚙</button>
 <div id="panel" hidden>
-  <div class="head"><span><button id="tabObject" class="on">Object</button><button id="tabCamera">Camera</button></span><span><button id="flipPanel" aria-label="Move panel">⇆</button><button id="copySetup">Copy</button><button id="closePanel">Done</button></span></div>
+  <div class="head"><span><button id="tabObject" class="on">Object</button><button id="tabCamera">View</button></span><span><button id="flipPanel" aria-label="Move panel">⇆</button><button id="copySetup">Copy</button><button id="closePanel">Done</button></span></div>
   <div id="pickName">Tap an object on the board</div>
   <div id="controls"></div>
   <div class="foot"><button id="resetOne">Reset this</button><button id="resetAll">Reset all</button></div>
   <textarea id="setupOut" rows="2" readonly placeholder="Copy puts the settings here too"></textarea>
 </div>
-<div id="ver">v1.13.0</div>
+<div id="ver">v1.14.0</div>
 <script>
   // iPad/iPhone Safari: no pinch or double-tap zoom, no page bounce, no long-press menu
   for (const ev of ['gesturestart', 'gesturechange', 'gestureend', 'dblclick', 'contextmenu']) document.addEventListener(ev, e => e.preventDefault(), { passive: false });
   document.addEventListener('touchmove', e => { if (!e.target.closest('#panel')) e.preventDefault(); }, { passive: false });
 </script>
-<script type="module" src="main.js?v=1.13.0"></script>
+<script type="module" src="main.js?v=1.14.0"></script>
 </body>
 </html>

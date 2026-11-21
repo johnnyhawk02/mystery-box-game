@@ -7,7 +7,7 @@ import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
 const OBJECTS = [
   { name: 'apple', letter: 'A', word: 'apple' },
   { name: 'ball', letter: 'B', word: 'ball' },
-  { name: 'cup', letter: 'C', word: 'cup' },
+  { name: 'cake', letter: 'C', word: 'cake' },
   { name: 'duck', letter: 'D', word: 'duck' },
   { name: 'egg', letter: 'E', word: 'egg' },
   { name: 'fish', letter: 'F', word: 'fish' },
@@ -16,7 +16,7 @@ const OBJECTS = [
   { name: 'jug', letter: 'J', word: 'jug' },
   { name: 'kiwi', letter: 'K', word: 'kiwi' },
   { name: 'lemon', letter: 'L', word: 'lemon' },
-  { name: 'monkey', letter: 'M', word: 'monkey' },
+  { name: 'cup', letter: 'M', word: 'mug' },
   { name: 'onion', letter: 'O', word: 'onion' },
   { name: 'pear', letter: 'P', word: 'pear' },
   { name: 'rock', letter: 'R', word: 'rock' },
@@ -31,8 +31,8 @@ const SPIN_SECONDS = 7;     // one slow turn while the object waits to be dragge
 const BOX_AT = new THREE.Vector3(-2.2, 0, 0.62);   // bottom-left, so the shown object has open space above it
 const BOX_SCALE = 0.85;
 const BOARD_AT = new THREE.Vector3(0, 0, -0.15);
-const REVEAL_SCALE = 2.3;   // objects are shown big when they come out of the box
-const DRAG_SCALE = REVEAL_SCALE;   // stays big while carried; shrinks only when it settles in its slot
+// how big an object is shown when it comes out of the box (and while carried): the View tab's 'Shown size'
+const revealScale = () => cam().shown;
 const PLACED_SCALE = 1.2;  // a little bigger in the slot so it's easy to see
 const DRAG_Y = 0.32;        // height objects float at while being dragged
 const DROP_RADIUS = 0.3;    // how close to a slot counts as dropping on it
@@ -173,12 +173,12 @@ const SETUP_DEFAULTS = {
   rock: {size: 1.15, turn: 66, tiltX: 0, tiltZ: 0, lift: 0.045},
   spoon: {size: 1.35, turn: 52, tiltX: 0, tiltZ: 0, lift: 0.05},
   table: {size: 1.5, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
-  monkey: {size: 1.4, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
+  cake: {size: 1.4, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
   ukulele: {size: 1.8, turn: 0, tiltX: -3, tiltZ: 1, lift: 0.145},
   vase: {size: 1.6, turn: 0, tiltX: -3, tiltZ: 0, lift: 0},
   wateringcan: {size: 1.9, turn: 314, tiltX: 0, tiltZ: 0, lift: 0.04},
 };
-const BLANK = { size: 1, turn: 0, tiltX: 0, tiltZ: 0, lift: 0 };
+const BLANK = { size: 1, turn: 0, tiltX: 0, tiltZ: 0, lift: 0, offX: 0, offZ: 0 };
 let setup = {};
 try {
   setup = JSON.parse(localStorage.getItem('mb-setup') || '{}');
@@ -193,7 +193,7 @@ function applySetup(it) {
   const c = setupOf(it.name);
   it.inner.scale.setScalar(c.size);
   it.inner.rotation.set(c.tiltX * DEG, c.turn * DEG, c.tiltZ * DEG, 'YXZ');
-  it.inner.position.y = c.lift;
+  it.inner.position.set(c.offX, c.lift, c.offZ);
 }
 
 // objects load only when a round needs them, so the game starts fast on a phone
@@ -225,8 +225,8 @@ for (const dx of [-0.45, 0.45]) fitPoints.push(revealPoint.clone().add(new THREE
 const lookAt = new THREE.Box3().setFromPoints(fitPoints).getCenter(new THREE.Vector3());
 lookAt.y = 0.25;
 // camera: tilt (degrees above the table), turn, zoom and pan, all adjustable in setup
-const CAMERA_DEFAULTS = {tilt: 49, turn: 0, zoom: 1, panX: 0, panZ: 0};   // zoom/pan reset when the box moved to the bottom-left
-const CAM_BLANK = { tilt: 66, turn: 0, zoom: 1, panX: 0, panZ: 0 };
+const CAMERA_DEFAULTS = {tilt: 49, turn: 0, zoom: 1, panX: 0, panZ: 0, shown: 1.4};   // zoom/pan reset when the box moved to the bottom-left
+const CAM_BLANK = { tilt: 66, turn: 0, zoom: 1, panX: 0, panZ: 0, shown: 1.4 };
 let camSet = {};
 try { camSet = JSON.parse(localStorage.getItem('mb-camera') || '{}'); } catch (e) {}
 const cam = () => ({ ...CAM_BLANK, ...CAMERA_DEFAULTS, ...camSet });
@@ -330,12 +330,12 @@ async function reveal() {
   flapsTo(1, 0.9);
   { const r0 = n.rotation.y, r1 = Math.round(r0 / (2 * Math.PI)) * 2 * Math.PI;   // face its set-up angle as it comes out
     tween(1.4, t => { n.rotation.y = r0 + (r1 - r0) * ease(t); }); }
-  await moveTo(n, shownPos(current), REVEAL_SCALE, 1.4);
+  await moveTo(n, shownPos(current), revealScale(), 1.4);
   flapsTo(0, 1.2);
   say(current.word);
   state = 'waiting';
 }
-const shownPos = it => revealPoint.clone().add(new THREE.Vector3(0, 0.18 - it.height * REVEAL_SCALE / 2, 0));
+const shownPos = it => revealPoint.clone().add(new THREE.Vector3(0, 0.18 - it.height * revealScale() / 2, 0));
 
 async function drop() {
   state = 'busy';
@@ -358,7 +358,7 @@ async function drop() {
   } else {
     tries++;
     nudge(it.letter);   // the right tile gives a tiny, slow lift-and-settle
-    await moveTo(n, shownPos(it), REVEAL_SCALE, 1.0, 0.35);
+    await moveTo(n, shownPos(it), revealScale(), 1.0, 0.35);
     if (tries >= 2) tiles[it.letter].target = 1;   // gentle prompt: the right letter softly glows
     say(it.word);
     state = 'waiting';
@@ -422,7 +422,7 @@ async function tapTo(ch) {
   state = 'busy';
   dragTarget.copy(slots[ch]);
   tiles[ch].target = tries >= 2 && ch === current.letter ? 1 : 0.6;
-  await moveTo(current.node, slots[ch].clone().setY(DRAG_Y), DRAG_SCALE, 0.9, 0.2);
+  await moveTo(current.node, slots[ch].clone().setY(DRAG_Y), revealScale(), 0.9, 0.2);
   drop();
 }
 canvas.addEventListener('pointermove', e => {
@@ -445,7 +445,7 @@ renderer.setAnimationLoop(now => {
   }
   if (state === 'dragging' && current) {
     const n = current.node;
-    const s = n.scale.x + (DRAG_SCALE - n.scale.x) * Math.min(1, dt * 6); n.scale.setScalar(s);
+    const s = n.scale.x + (revealScale() - n.scale.x) * Math.min(1, dt * 6); n.scale.setScalar(s);
     const wantY = overBox(n.position) || overBox(dragTarget) ? 0.68 : DRAG_Y;
     dragY += (wantY - dragY) * Math.min(1, dt * 6);
     // put the object's middle on the finger's line of sight, so it never jumps away from the finger
@@ -499,6 +499,8 @@ const FIELDS = [
   ['tiltX', 'Tilt fwd/back', -90, 90, 1, v => v + '°'],
   ['tiltZ', 'Tilt sideways', -90, 90, 1, v => v + '°'],
   ['lift', 'Lift', -0.1, 0.2, 0.005, v => v.toFixed(3)],
+  ['offX', 'Left/right', -0.2, 0.2, 0.005, v => v.toFixed(3)],
+  ['offZ', 'Back/front', -0.2, 0.2, 0.005, v => v.toFixed(3)],
 ];
 async function enterSetup() {
   if (state === 'setup') return;
@@ -565,6 +567,7 @@ const CAM_FIELDS = [
   ['zoom', 'Zoom', 0.6, 2, 0.01, v => v.toFixed(2)],
   ['panX', 'Left/right', -2, 2, 0.01, v => v.toFixed(2)],
   ['panZ', 'Up/down', -1.5, 1.5, 0.01, v => v.toFixed(2)],
+  ['shown', 'Shown size', 0.6, 2.6, 0.05, v => v.toFixed(2)],
 ];
 let tab = 'object';
 function showTab(t) {
@@ -573,7 +576,7 @@ function showTab(t) {
   document.getElementById('tabCamera').classList.toggle('on', t === 'camera');
   if (t === 'object') return pick(picked);
   for (const tt of Object.values(tiles)) tt.target = 0;
-  pickName.textContent = 'Camera';
+  pickName.textContent = 'View';
   controls.innerHTML = '';
   const c = cam();
   for (const [key, label, min, max, step, fmt] of CAM_FIELDS) {
