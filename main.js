@@ -7,12 +7,11 @@ import { RoomEnvironment } from './vendor/environments/RoomEnvironment.js';
 // every object the game knows; each round picks ROUND_SIZE of them with different letters
 const OBJECTS = [
   { name: 'apple', letter: 'A', word: 'apple' },
-  { name: 'ball', letter: 'B', word: 'ball' },
+  { name: 'football', letter: 'B', word: 'ball' },
   { name: 'cake', letter: 'C', word: 'cake' },
   { name: 'cup', letter: 'C', word: 'cup' },
   { name: 'duck', letter: 'D', word: 'duck' },
   { name: 'egg', letter: 'E', word: 'egg' },
-  { name: 'football', letter: 'F', word: 'football' },
   { name: 'gloves', letter: 'G', word: 'gloves' },
   { name: 'hat', letter: 'H', word: 'hat' },
   { name: 'jug', letter: 'J', word: 'jug' },
@@ -163,7 +162,6 @@ try { if (localStorage.getItem('mb-defaults') !== DEFAULTS_ID) {
 } } catch (e) {}
 const SETUP_DEFAULTS = {
   apple: {size: 1.5, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
-  ball: {size: 1.9, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
   cup: {size: 1.6, turn: 319, tiltX: 0, tiltZ: 0, lift: 0.035},
   duck: {size: 1.25, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
   egg: {size: 1.45, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
