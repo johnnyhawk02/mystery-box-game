@@ -8,12 +8,11 @@ Models from [Poly Haven](https://polyhaven.com) (CC0, public domain), trimmed an
 - **jug** (J): "Jug 01" by Kuutti Siitonen, CC0. https://polyhaven.com/a/jug_01
 - **kiwi** (K): "Food Kiwi 01" by Oliver Harries, CC0. https://polyhaven.com/a/food_kiwi_01
 - **lemon** (L): "Lemon" by Kuutti Siitonen, CC0. https://polyhaven.com/a/lemon
-- **microscope** (M): "Vintage Microscope" by Luis José Fernández Rodríguez, CC0. https://polyhaven.com/a/vintage_microscope
 - **onion** (O): "Yellow Onion" by Kuutti Siitonen, CC0. https://polyhaven.com/a/yellow_onion
 - **pear** (P): "Pears Asian 01" by Amal Kumar, CC0. https://polyhaven.com/a/food_pears_asian_01
 - **rock** (R): "Rock 07" by Jenelle van Heerden, CC0. https://polyhaven.com/a/rock_07
 - **spoon** (S): "Wooden Spoon" by Ronnie Barter, CC0. https://polyhaven.com/a/wooden_spoon
-- **television** (T): "Television 01" by Gabriel Radić, CC0. https://polyhaven.com/a/Television_01
+- **teapot** (T): from "Tea Set 01" by James Ray Cock (texturing), Rico Cilliers (modeling), Jurita Burger (graphic design), CC0. https://polyhaven.com/a/tea_set_01
 - **ukulele** (U): "Ukulele 01" by Joseph Burgan, CC0. https://polyhaven.com/a/Ukulele_01
 - **vase** (V): "Ceramic Vase 01" by James Ray Cock, CC0. https://polyhaven.com/a/ceramic_vase_01
 - **watering can** (W): "Watering Can Metal 01" by Charles Nderitu, CC0. https://polyhaven.com/a/watering_can_metal_01
