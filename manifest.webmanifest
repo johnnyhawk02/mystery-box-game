@@ -1,0 +1,3 @@
+{ "name": "Mystery Box", "short_name": "Mystery Box", "start_url": ".", "display": "fullscreen",
+  "orientation": "landscape", "background_color": "#d9d2c5", "theme_color": "#d9d2c5",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }] }
