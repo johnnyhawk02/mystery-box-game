@@ -28,7 +28,7 @@ const OBJECTS = [
 ];
 const ROUND_SIZE = 6;
 const SPIN_SECONDS = 7;     // one slow turn while the object waits to be dragged
-const BOX_AT = new THREE.Vector3(-2.2, 0, -0.15);
+const BOX_AT = new THREE.Vector3(-2.2, 0, 0.62);   // bottom-left, so the shown object has open space above it
 const BOX_SCALE = 0.85;
 const BOARD_AT = new THREE.Vector3(0, 0, -0.15);
 const REVEAL_SCALE = 2.3;   // objects are shown big when they come out of the box
@@ -151,7 +151,7 @@ caseBtn.addEventListener('click', () => {
 // SETUP_DEFAULTS can be filled from the setup panel's "Copy" output to make them the same on every device.
 // Johnny's settings from 2026-11-21. Bump DEFAULTS_ID when these change: devices then drop their own
 // saved tweaks so everyone starts from the same defaults.
-const DEFAULTS_ID = '2026-11-21a';
+const DEFAULTS_ID = '2026-11-21b';
 try { if (localStorage.getItem('mb-defaults') !== DEFAULTS_ID) {
   localStorage.removeItem('mb-setup'); localStorage.removeItem('mb-sizes'); localStorage.removeItem('mb-camera');
   localStorage.setItem('mb-defaults', DEFAULTS_ID);
@@ -221,11 +221,11 @@ for (const root of [box, board]) {
   const b = new THREE.Box3().setFromObject(root);
   for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z]) fitPoints.push(new THREE.Vector3(x, y, z));
 }
-fitPoints.push(revealPoint.clone().add(new THREE.Vector3(0, 0.4, 0)));
+for (const dx of [-0.45, 0.45]) fitPoints.push(revealPoint.clone().add(new THREE.Vector3(dx, 0.45, 0)));   // room for the shown object
 const lookAt = new THREE.Box3().setFromPoints(fitPoints).getCenter(new THREE.Vector3());
 lookAt.y = 0.25;
 // camera: tilt (degrees above the table), turn, zoom and pan, all adjustable in setup
-const CAMERA_DEFAULTS = {tilt: 49, turn: 0, zoom: 1.15, panX: 0, panZ: -0.14};
+const CAMERA_DEFAULTS = {tilt: 49, turn: 0, zoom: 1, panX: 0, panZ: 0};   // zoom/pan reset when the box moved to the bottom-left
 const CAM_BLANK = { tilt: 66, turn: 0, zoom: 1, panX: 0, panZ: 0 };
 let camSet = {};
 try { camSet = JSON.parse(localStorage.getItem('mb-camera') || '{}'); } catch (e) {}
