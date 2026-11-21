@@ -34,5 +34,7 @@ Models from [BlendSwap](https://www.blendswap.com), converted for the game (reco
 
 - **Zebra** (Z): "zebra idle" model, downloaded by Johnny (source/licence to confirm), posed and trimmed for the game.
 
+- **Nest** (N): "Robin nest" free download (robin's nest with eggs), downloaded by Johnny (source/licence to confirm).
+
 Everything else (box with felt door, board, football (used as the B ball), the square table, the grey rock, the metal spoon, the umbrella) was made for this game in `blender/build_game_models.py`.
 Three.js is MIT licensed (`vendor/THREE-LICENSE`).

@@ -19,6 +19,7 @@ const OBJECTS = [
   { name: 'kiwi', letter: 'K', word: 'kiwi' },
   { name: 'lemon', letter: 'L', word: 'lemon' },
   { name: 'monkey', letter: 'M', word: 'monkey' },
+  { name: 'nest', letter: 'N', word: 'nest' },
   { name: 'onion', letter: 'O', word: 'onion' },
   { name: 'pear', letter: 'P', word: 'pear' },
   { name: 'queen', letter: 'Q', word: 'queen' },
@@ -162,7 +163,7 @@ caseBtn.addEventListener('click', () => {
 // SETUP_DEFAULTS can be filled from the setup panel's "Copy" output to make them the same on every device.
 // Johnny's settings from 2026-11-21 (evening). Bump DEFAULTS_ID when these change: devices then drop their own
 // saved tweaks so everyone starts from the same defaults.
-const DEFAULTS_ID = '2026-11-21i';
+const DEFAULTS_ID = '2026-11-21j';
 try { if (localStorage.getItem('mb-defaults') !== DEFAULTS_ID) {
   localStorage.removeItem('mb-setup'); localStorage.removeItem('mb-sizes'); localStorage.removeItem('mb-camera');
   localStorage.setItem('mb-defaults', DEFAULTS_ID);
@@ -186,12 +187,13 @@ const SETUP_DEFAULTS = {
   rock: {size: 1.2, turn: 20, tiltX: 0, tiltZ: 0, lift: 0.045, offX: 0, offZ: 0},
   spoon: {size: 1.6, turn: 53, tiltX: 12, tiltZ: 0, lift: 0.06, offX: -0.005, offZ: 0},
   table: {size: 1, turn: 175, tiltX: 0, tiltZ: 0, lift: 0, offX: 0, offZ: 0},
-  zebra: {size: 1.6, turn: 90, tiltX: -50, tiltZ: 0, lift: 0.06, offX: 0, offZ: 0.08},
+  zebra: {size: 1.6, turn: 35, tiltX: -39, tiltZ: 0, lift: 0.125, offX: 0, offZ: 0.08},
+  nest: {size: 1.5, turn: 0, tiltX: -25, tiltZ: 0, lift: 0.02, offX: 0, offZ: 0},
   umbrella: {size: 1.45, turn: 26, tiltX: 0, tiltZ: 0, lift: 0.08, offX: 0.01, offZ: 0.01},
   vase: {size: 1.6, turn: 0, tiltX: -3, tiltZ: 0, lift: 0, offX: 0, offZ: 0},
   wateringcan: {size: 1.9, turn: 314, tiltX: 0, tiltZ: 0, lift: 0.04, offX: -0.035, offZ: 0.045},
   xray: {size: 1.05, turn: 49, tiltX: 12, tiltZ: 0, lift: 0.2, offX: -0.06, offZ: 0},
-  yak: {size: 1.65, turn: 90, tiltX: -57, tiltZ: 0, lift: 0.06, offX: 0.015, offZ: 0.1},
+  yak: {size: 1.65, turn: 30, tiltX: -57, tiltZ: 0, lift: 0.135, offX: -0.03, offZ: 0.1},
   icecream: {size: 1.75, turn: 0, tiltX: -5, tiltZ: 0, lift: 0.03, offX: 0, offZ: 0.06},
 };
 const BLANK = { size: 1, turn: 0, tiltX: 0, tiltZ: 0, lift: 0, offX: 0, offZ: 0 };
@@ -539,8 +541,18 @@ function screenDist(e, worldPos) {
   const r = canvas.getBoundingClientRect(), v = worldPos.clone().project(camera);
   return Math.hypot((v.x + 1) / 2 * r.width + r.left - e.clientX, (1 - v.y) / 2 * r.height + r.top - e.clientY);
 }
+// touching an object already on its letter makes it turn round once: slow, faster, slow
+function spinPlaced(it) {
+  if (it.spinning) return;
+  it.spinning = true; const n = it.node, r0 = n.rotation.y;
+  tween(1.6, t => { n.rotation.y = r0 + 2 * Math.PI * ease(t); }).then(() => { n.rotation.y = r0; it.spinning = false; });
+}
 canvas.addEventListener('pointerdown', e => {
   pointer(e); lastActive = clock;
+  if (state === 'idle' || state === 'waiting') {
+    const placed = round.find(it => it.placed && it.node.visible && ray.intersectObject(it.node, true).length > 0);
+    if (placed && !(current && ray.intersectObject(current.node, true).length > 0)) { spinPlaced(placed); return; }
+  }
   if (state === 'idle') {
     const target = cam().reveal === 'beam' ? pad : box;
     const hitBox = ray.intersectObject(target, true).length > 0 || screenDist(e, cam().reveal === 'beam' ? PAD_AT.clone().setY(0.1) : BOX_AT.clone().setY(0.4)) < 90;
@@ -758,3 +770,5 @@ window.__mb.tileScreen = ch => window.__mb.screenOf(slots[ch].clone().setZ(slots
 window.__mb.dbgShadow = () => { const it = current; if (!it) return null; let n = 0, withDepth = 0, uv = 0;
   it.node.traverse(o => { if (o.isMesh) { n++; if (o.customDepthMaterial) withDepth++; if (o.geometry.attributes.uv) uv++; } });
   return { n, withDepth, uv, fade: it.shadowFade && it.shadowFade.value, cast: (() => { let c = []; it.node.traverse(o => o.isMesh && c.push(o.castShadow)); return c; })() }; };
+window.__mb.placedScreen = () => { const it = round.find(i => i.placed); return it ? window.__mb.screenOf(it.node.position.clone().setY(0.12)) : null; };
+window.__mb.anySpinning = () => round.some(i => i.spinning);
