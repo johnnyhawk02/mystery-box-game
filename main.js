@@ -174,7 +174,7 @@ const SETUP_DEFAULTS = {
   kiwi: {size: 1.45, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
   lemon: {size: 1.5, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
   onion: {size: 1.7, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
-  pear: {size: 1.3, turn: 0, tiltX: -10, tiltZ: 0, lift: 0.055},
+  pear: {size: 1.5, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
   rock: {size: 1.2, turn: 20, tiltX: 0, tiltZ: 0, lift: 0.01},
   spoon: {size: 1.6, turn: 30, tiltX: 0, tiltZ: 0, lift: 0.01},
   table: {size: 1.1, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
