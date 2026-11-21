@@ -20,7 +20,7 @@ Models from [BlendSwap](https://www.blendswap.com), converted for the game (reco
 - **Rubber duck** (D): "Rubber Duck" by mStuff, CC0 (public domain). https://www.blendswap.com/blends/view/69071
 - **Apple** (A): "RedYellow Apple textured for Eevee and Cycles", from BlendSwap. Author and licence to be confirmed.
 - **Egg** (E): "The Egg", Blend Swap #80990, CC-BY 3.0, by the original uploader (credited as required). https://www.blendswap.com/blends/view/80990
-- **Coffee mug** (M, "mug"): "Coffee Mug", from BlendSwap. Author and licence to be confirmed.
+- **Coffee mug** (C, "cup"): "Coffee Mug", from BlendSwap. Author and licence to be confirmed.
 
 Everything else (box with felt door, board, fish, the square table, the grey rock, the birthday cake) was made for this game in `blender/build_game_models.py`.
 Three.js is MIT licensed (`vendor/THREE-LICENSE`).

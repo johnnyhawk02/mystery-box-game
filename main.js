@@ -8,6 +8,7 @@ const OBJECTS = [
   { name: 'apple', letter: 'A', word: 'apple' },
   { name: 'ball', letter: 'B', word: 'ball' },
   { name: 'cake', letter: 'C', word: 'cake' },
+  { name: 'cup', letter: 'C', word: 'cup' },
   { name: 'duck', letter: 'D', word: 'duck' },
   { name: 'egg', letter: 'E', word: 'egg' },
   { name: 'fish', letter: 'F', word: 'fish' },
@@ -16,7 +17,6 @@ const OBJECTS = [
   { name: 'jug', letter: 'J', word: 'jug' },
   { name: 'kiwi', letter: 'K', word: 'kiwi' },
   { name: 'lemon', letter: 'L', word: 'lemon' },
-  { name: 'cup', letter: 'M', word: 'mug' },
   { name: 'onion', letter: 'O', word: 'onion' },
   { name: 'pear', letter: 'P', word: 'pear' },
   { name: 'rock', letter: 'R', word: 'rock' },
@@ -210,7 +210,9 @@ function getItem(o) {
 }
 let round = [], roundReady = null;
 function newRound() {
-  const picks = shuffle(OBJECTS.slice()).slice(0, ROUND_SIZE);
+  // one object per letter in a round (some letters have two objects to choose from)
+  const picks = [], used = new Set();
+  for (const o of shuffle(OBJECTS.slice())) if (!used.has(o.letter) && picks.length < ROUND_SIZE) { picks.push(o); used.add(o.letter); }
   roundReady = Promise.all(picks.map(getItem)).then(r => { round = r; queue = shuffle(r.slice()); fillPile(r); });
   return roundReady;
 }
@@ -509,7 +511,11 @@ async function enterSetup() {
   for (const p of Object.values(loaded)) p.then(it => { it.node.visible = false; });
   setupItems = await Promise.all(OBJECTS.map(getItem));
   for (const it of setupItems) {
-    it.node.visible = true; it.node.position.copy(slots[it.letter]); it.node.scale.setScalar(PLACED_SCALE); it.node.rotation.set(0, 0, 0);
+    // letters with two objects show them side by side in the slot
+    const same = setupItems.filter(i => i.letter === it.letter), k = same.indexOf(it);
+    const dx = same.length > 1 ? (k - (same.length - 1) / 2) * 0.22 : 0;
+    it.node.visible = true; it.node.position.copy(slots[it.letter]).add(new THREE.Vector3(dx, 0, 0));
+    it.node.scale.setScalar(PLACED_SCALE * (same.length > 1 ? 0.75 : 1)); it.node.rotation.set(0, 0, 0);
   }
   pick(null); showTab('object'); panel.hidden = false;
 }
