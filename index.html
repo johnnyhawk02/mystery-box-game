@@ -13,6 +13,8 @@
   #ver { position: fixed; right: 10px; bottom: 6px; font: 11px system-ui, sans-serif; color: #8d8577; pointer-events: none; }
   #full { position: fixed; right: 10px; top: 10px; width: 40px; height: 40px; border: 0; border-radius: 12px;
           background: rgba(255,255,255,.45); color: #6c6658; font-size: 20px; line-height: 40px; padding: 0; }
+  #case { position: fixed; right: 106px; top: 10px; width: 52px; height: 40px; border: 0; border-radius: 12px;
+          background: rgba(255,255,255,.45); color: #45506a; font: 600 15px system-ui, sans-serif; padding: 0; }
   #sound { position: fixed; right: 58px; top: 10px; width: 40px; height: 40px; border: 0; border-radius: 12px;
           background: rgba(255,255,255,.45); color: #6c6658; font-size: 18px; line-height: 40px; padding: 0; }
 </style>
@@ -20,9 +22,10 @@
 </head>
 <body>
 <canvas id="c"></canvas>
+<button id="case" aria-label="Capitals or small letters">ABC</button>
 <button id="sound" aria-label="Sound on or off">🔊</button>
 <button id="full" aria-label="Full screen">⛶</button>
-<div id="ver">v1.0.1</div>
+<div id="ver">v1.1.0</div>
 <script type="module" src="main.js"></script>
 </body>
 </html>

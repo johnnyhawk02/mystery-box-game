@@ -63,9 +63,9 @@ def cyl_bm(r, d, seg=40, r2=None, at=(0, 0, 0)):
 def sphere_bm(r, scale=(1, 1, 1), at=(0, 0, 0), u=32, v=20):
     bm = bmesh.new(); bmesh.ops.create_uvsphere(bm, u_segments=u, v_segments=v, radius=r)
     bmesh.ops.scale(bm, vec=scale, verts=bm.verts); bmesh.ops.translate(bm, vec=at, verts=bm.verts); return bm
-def text_obj(name, s, size, depth, m):
+def text_obj(name, s, size, depth, m, align_y='CENTER'):
     cu = bpy.data.curves.new(name, 'FONT'); cu.body = s; cu.size = size; cu.extrude = depth
-    cu.align_x = 'CENTER'; cu.align_y = 'CENTER'; cu.bevel_depth = depth * 0.4; cu.bevel_resolution = 2
+    cu.align_x = 'CENTER'; cu.align_y = align_y; cu.bevel_depth = depth * 0.4; cu.bevel_resolution = 2
     ob = link(bpy.data.objects.new(name, cu)); cu.materials.append(m)
     select_only(ob); bpy.ops.object.convert(target='MESH')
     ob = bpy.context.view_layer.objects.active; ob.name = name; return ob
@@ -177,8 +177,8 @@ BOX_OBJS = [rig, body, lid, reveal]
 # =====================================================================
 # ALPHABET BOARD
 # =====================================================================
-COLS, CW, CH, GAP = 7, 0.42, 0.52, 0.03
-BW = COLS*CW + 0.22; BD = 4*CH + 0.22; BT = 0.07
+COLS, ROWS, CW, CH, GAP = 9, 3, 0.42, 0.52, 0.03   # wide 3-row layout suits a phone in landscape
+BW = COLS*CW + 0.22; BD = ROWS*CH + 0.22; BT = 0.07
 board_root = empty('AlphabetBoard', (0, 0, 0), 0.3)
 base = mesh_obj('board_base', box_bm(BW, BD, BT, at=(0, 0, BT/2)), C['board']); bevel(base, 0.02, 3)
 rimo = mesh_obj('board_rim', box_bm(BW + 0.06, BD + 0.06, 0.035, at=(0, 0, BT + 0.0175)), C['rim'])
@@ -190,22 +190,23 @@ SLOTS = {}
 TILE_T = 0.025; TOP = BT + TILE_T
 for i, ch in enumerate('ABCDEFGHIJKLMNOPQRSTUVWXYZ'):
     row, c = divmod(i, COLS)
-    if row == 3: c += 1
-    x = -BW/2 + 0.11 + CW*(c + 0.5); y = BD/2 - 0.11 - CH*(row + 0.5)
+    cx = c + (0.5 if row == ROWS - 1 else 0)   # last row has 8 letters: centre it
+    x = -BW/2 + 0.11 + CW*(cx + 0.5); y = BD/2 - 0.11 - CH*(row + 0.5)
     t = mesh_obj('tile_' + ch, box_bm(CW - GAP, CH - GAP, TILE_T, at=(0, 0, TILE_T/2)), [TILE[i % 4], C['dip']])
     t.location = (x, y, BT)
-    cut = mesh_obj('cut', cyl_bm(0.14, 0.1, 48, at=(x, y + 0.07, BT + TILE_T + 0.03)), C['dip'])
+    cut = mesh_obj('cut', cyl_bm(0.14, 0.1, 48, at=(x, y + 0.085, BT + TILE_T + 0.03)), C['dip'])
     cut.location -= Vector((x, y, BT)) * 0  # world-space cutter
     bpy.context.view_layer.update()
     boolean(t, cut); bevel(t, 0.01, 2)
     for p in t.data.polygons:
-        if p.center.z < TILE_T - 0.004 and p.normal.z > -0.5 and math.hypot(p.center.x, p.center.y - 0.07) < 0.145: p.material_index = 1
-    lt = text_obj('letter_' + ch, ch + ch.lower(), 0.15, 0.005, C['ink'])
-    lt.location = (x, y - 0.17, TOP + 0.001)
-    lt.parent = None
-    t2 = join('tile_' + ch, [t, lt])
-    parent_keep(t2, board_root)
-    s = empty('slot_' + ch, (x, y + 0.07, TOP - 0.025), 0.12); parent_keep(s, board_root)
+        if p.center.z < TILE_T - 0.004 and p.normal.z > -0.5 and math.hypot(p.center.x, p.center.y - 0.085) < 0.145: p.material_index = 1
+    t2 = t; parent_keep(t2, board_root)
+    # capitals and small letters are separate nodes so the game can switch between them
+    for nm, txt in (('upper_', ch), ('lower_', ch.lower())):
+        lt = text_obj(nm + ch, txt, 0.19, 0.006, C['ink'], 'BOTTOM_BASELINE')  # shared baseline, so g/j/p/q/y hang below
+        lt.location = (x, y - 0.19, TOP + 0.001)
+        parent_keep(lt, board_root); BOARD_OBJS.append(lt)
+    s = empty('slot_' + ch, (x, y + 0.085, TOP - 0.025), 0.12); parent_keep(s, board_root)
     SLOTS[ch] = s; BOARD_OBJS += [t2, s]
 # note: joining moved origin to the tile's origin; that's fine
 
@@ -335,7 +336,7 @@ finish('fish', 'F', [fb, tail, dors] + side)
 # =====================================================================
 # LAYOUT for previews: box on the left, board on the right, objects in a row
 # =====================================================================
-BOX_AT = Vector((-2.05, 0.15, 0)); BOARD_AT = Vector((0.55, 0.15, 0))
+BOX_AT = Vector((-2.75, 0.15, 0)); BOARD_AT = Vector((0.0, 0.15, 0))
 rig.location = BOX_AT; board_root.location = BOARD_AT
 bpy.context.view_layer.update()
 SHELF = {}
@@ -376,6 +377,8 @@ def hide_objects(except_=()):
         for o in [root] + list(root.children_recursive): o.hide_render = name not in except_
 
 if '--render' in ARGS:
+    for o in bpy.data.objects:
+        if o.name.startswith('lower_'): o.hide_render = True
     setup_render()
     out = os.path.join(HERE, 'renders'); os.makedirs(out, exist_ok=True)
     # 1. game screen: closed box, empty board

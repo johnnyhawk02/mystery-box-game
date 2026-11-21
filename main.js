@@ -11,10 +11,12 @@ const OBJECTS = [
   { name: 'egg', letter: 'E', word: 'egg' },
   { name: 'fish', letter: 'F', word: 'fish' },
 ];
-const BOX_AT = new THREE.Vector3(-2.05, 0, -0.15);
-const BOARD_AT = new THREE.Vector3(0.55, 0, -0.15);
+const BOX_AT = new THREE.Vector3(-2.5, 0, -0.15);
+const BOX_SCALE = 0.85;
+const BOARD_AT = new THREE.Vector3(0, 0, -0.15);
 const REVEAL_SCALE = 2.3;   // objects are shown big when they come out of the box
 const DRAG_SCALE = 1.35;
+const PLACED_SCALE = 1.2;  // a little bigger in the slot so it's easy to see
 const DRAG_Y = 0.32;        // height objects float at while being dragged
 const DROP_RADIUS = 0.3;    // how close to a slot counts as dropping on it
 const HINT_EVERY = 6;       // seconds of no activity before the box gently invites a tap
@@ -36,7 +38,7 @@ const sun = new THREE.DirectionalLight(0xfff3e2, 1.9);
 sun.position.set(-3, 7, 4.5);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
-Object.assign(sun.shadow.camera, { left: -4.5, right: 4.5, top: 4, bottom: -4, near: 1, far: 20 });
+Object.assign(sun.shadow.camera, { left: -4, right: 4, top: 3.5, bottom: -3.5, near: 1, far: 20 });
 sun.shadow.radius = 6; sun.shadow.bias = -0.0005;
 scene.add(sun);
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: BG, roughness: 1 }));
@@ -95,15 +97,15 @@ const [boxG, boardG, ...objG] = await Promise.all([
 ]);
 const shadowy = root => root.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
 
-const box = boxG.scene; box.position.copy(BOX_AT); shadowy(box); scene.add(box);
+const box = boxG.scene; box.position.copy(BOX_AT); box.scale.setScalar(BOX_SCALE); shadowy(box); scene.add(box);
 const mixer = new THREE.AnimationMixer(box);
 const clips = Object.fromEntries(boxG.animations.map(c => [c.name, c]));
 const board = boardG.scene; board.position.copy(BOARD_AT); shadowy(board); scene.add(board);
 scene.updateMatrixWorld(true);
 
 const revealPoint = box.getObjectByName('reveal_point').getWorldPosition(new THREE.Vector3());
-const insideBox = BOX_AT.clone().add(new THREE.Vector3(0, 0.12, 0));
-const aboveBox = BOX_AT.clone().add(new THREE.Vector3(0, 0.95, 0));
+const insideBox = BOX_AT.clone().add(new THREE.Vector3(0, 0.1, 0));
+const aboveBox = BOX_AT.clone().add(new THREE.Vector3(0, 0.85, 0));
 const slots = {}, tiles = {};
 for (const ch of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
   slots[ch] = board.getObjectByName('slot_' + ch).getWorldPosition(new THREE.Vector3());
@@ -111,6 +113,23 @@ for (const ch of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
   t.traverse(m => { if (m.isMesh) { m.material = m.material.clone(); m.material.emissive = new THREE.Color('#fff4d0'); mats.push(m.material); } });
   tiles[ch] = { mats, glow: 0, target: 0 };
 }
+
+// capitals or small letters: one switch, remembered on this device
+const caseBtn = document.getElementById('case');
+let lowerCase = false;
+try { lowerCase = localStorage.getItem('mb-case') === 'lower'; } catch (e) {}
+function showCase() {
+  for (const ch of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
+    board.getObjectByName('upper_' + ch).visible = !lowerCase;
+    board.getObjectByName('lower_' + ch).visible = lowerCase;
+  }
+  caseBtn.textContent = lowerCase ? 'abc' : 'ABC';
+}
+showCase();
+caseBtn.addEventListener('click', () => {
+  lowerCase = !lowerCase; showCase();
+  try { localStorage.setItem('mb-case', lowerCase ? 'lower' : 'upper'); } catch (e) {}
+});
 
 const items = OBJECTS.map((o, i) => {
   const node = new THREE.Group(); node.add(objG[i].scene); shadowy(node);
@@ -125,26 +144,35 @@ for (const root of [box, board]) {
   const b = new THREE.Box3().setFromObject(root);
   for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z]) fitPoints.push(new THREE.Vector3(x, y, z));
 }
-fitPoints.push(revealPoint.clone().add(new THREE.Vector3(0, 0.55, 0)));
-for (const x of [-0.45, 0.45]) fitPoints.push(BOX_AT.clone().add(new THREE.Vector3(x, 1.5, -0.6)));  // open lid
+fitPoints.push(revealPoint.clone().add(new THREE.Vector3(0, 0.4, 0)));
+for (const x of [-0.4, 0.4]) fitPoints.push(BOX_AT.clone().add(new THREE.Vector3(x, 1.3, -0.5)));  // open lid
 const lookAt = new THREE.Box3().setFromPoints(fitPoints).getCenter(new THREE.Vector3());
 lookAt.y = 0.25;
-const viewDir = new THREE.Vector3(0, 1.45, 1.0).normalize();
+const viewDir = new THREE.Vector3(0, 2.3, 1.0).normalize();
 function fit() {
   const w = canvas.clientWidth, h = canvas.clientHeight;
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
-  const v = new THREE.Vector3();
-  let lo = 2, hi = 40;
-  for (let i = 0; i < 30; i++) {
-    const d = (lo + hi) / 2;
+  const v = new THREE.Vector3(), place = d => {
     camera.position.copy(lookAt).addScaledVector(viewDir, d); camera.lookAt(lookAt);
     camera.updateMatrixWorld(); camera.updateProjectionMatrix();
-    const ok = fitPoints.every(p => { v.copy(p).project(camera); return Math.abs(v.x) < 0.94 && v.y < 0.86 && v.y > -0.94; });
-    if (ok) hi = d; else lo = d;
+  };
+  // zoom in until the scene just fits, then nudge the aim so it sits centred; repeat a few times
+  for (let pass = 0; pass < 4; pass++) {
+    let lo = 1, hi = 40;
+    for (let i = 0; i < 30; i++) {
+      const d = (lo + hi) / 2; place(d);
+      const ok = fitPoints.every(p => { v.copy(p).project(camera); return Math.abs(v.x) < 0.95 && v.y < 0.84 && v.y > -0.96; });
+      if (ok) hi = d; else lo = d;
+    }
+    place(hi);
+    let x0 = 1, x1 = -1, y0 = 1, y1 = -1;
+    for (const p of fitPoints) { v.copy(p).project(camera); x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y); }
+    const halfH = hi * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), halfW = halfH * camera.aspect;
+    const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+    const up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+    lookAt.addScaledVector(right, (x0 + x1) / 2 * halfW).addScaledVector(up, ((y0 + y1) / 2 + 0.06) * halfH);
   }
-  camera.position.copy(lookAt).addScaledVector(viewDir, hi); camera.lookAt(lookAt);
-  camera.updateMatrixWorld(); camera.updateProjectionMatrix();
 }
 window.addEventListener('resize', fit);
 fit();
@@ -184,7 +212,7 @@ async function drop() {
   }
   for (const t of Object.values(tiles)) t.target = 0;
   if (best === it.letter) {
-    await moveTo(n, slots[best], 1, 0.7, 0.1);
+    await moveTo(n, slots[best], PLACED_SCALE, 0.7, 0.1);
     it.placed = true; current = null;
     say(`${it.letter}. ${it.word}`);
     await play('close');
@@ -220,7 +248,7 @@ const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.07);
 const dragTarget = new THREE.Vector3();   // spot on the board under the finger
 const holdPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), holdHit = new THREE.Vector3();
 let dragY = DRAG_Y;
-const overBox = p => Math.abs(p.x - BOX_AT.x) < 0.65 && Math.abs(p.z - BOX_AT.z) < 0.65;
+const overBox = p => Math.abs(p.x - BOX_AT.x) < 0.6 && Math.abs(p.z - BOX_AT.z) < 0.6;
 function pointer(e) {
   const r = canvas.getBoundingClientRect();
   ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
@@ -265,7 +293,7 @@ renderer.setAnimationLoop(now => {
   if (state === 'dragging' && current) {
     const n = current.node;
     const s = n.scale.x + (DRAG_SCALE - n.scale.x) * Math.min(1, dt * 6); n.scale.setScalar(s);
-    const wantY = overBox(n.position) || overBox(dragTarget) ? 0.75 : DRAG_Y;
+    const wantY = overBox(n.position) || overBox(dragTarget) ? 0.68 : DRAG_Y;
     dragY += (wantY - dragY) * Math.min(1, dt * 6);
     // put the object's middle on the finger's line of sight, so it never jumps away from the finger
     const mid = current.height * s / 2;
