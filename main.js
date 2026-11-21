@@ -107,7 +107,9 @@ document.getElementById('full').addEventListener('click', async () => {
 
 // ---------------- load models ----------------
 const loader = new GLTFLoader();
-const load = url => new Promise((res, rej) => loader.load(url, res, undefined, rej));
+// the page passes its version (main.js?v=…) so a new release never mixes with cached old models
+const V = new URL(import.meta.url).searchParams.get('v') || '';
+const load = url => new Promise((res, rej) => loader.load(url + (V ? '?v=' + V : ''), res, undefined, rej));
 const [boxG, boardG] = await Promise.all([load('assets/mystery_box.glb'), load('assets/alphabet_board.glb')]);
 const shadowy = root => root.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
 

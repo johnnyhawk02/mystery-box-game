@@ -17,8 +17,8 @@
           background: rgba(255,255,255,.45); color: #6c6658; font-size: 20px; line-height: 40px; padding: 0; }
   #case { position: fixed; right: 106px; top: 10px; width: 52px; height: 40px; border: 0; border-radius: 12px;
           background: rgba(255,255,255,.45); color: #45506a; font: 600 15px system-ui, sans-serif; padding: 0; }
-  #gear { position: fixed; left: 8px; top: 8px; width: 34px; height: 34px; border: 0; border-radius: 10px;
-          background: transparent; color: #b3aa98; font-size: 18px; padding: 0; opacity: .55; }
+  #gear { position: fixed; left: 10px; top: 10px; width: 40px; height: 40px; border: 0; border-radius: 12px;
+          background: rgba(255,255,255,.45); color: #6c6658; font-size: 20px; line-height: 40px; padding: 0; }
   #panel { position: fixed; top: 8px; left: 8px; max-height: calc(100dvh - 16px); width: min(340px, 40vw); overflow-y: auto; touch-action: pan-y;
            background: rgba(247,242,232,.96); border-radius: 16px; padding: 10px 14px; box-shadow: 0 4px 18px rgba(0,0,0,.15);
            font: 14px system-ui, sans-serif; color: #45506a; box-sizing: border-box; -webkit-user-select: none; }
@@ -51,12 +51,12 @@
   <div class="foot"><button id="resetOne">Reset this</button><button id="resetAll">Reset all</button></div>
   <textarea id="setupOut" rows="2" readonly placeholder="Copy puts the settings here too"></textarea>
 </div>
-<div id="ver">v1.9.0</div>
+<div id="ver">v1.9.1</div>
 <script>
   // iPad/iPhone Safari: no pinch or double-tap zoom, no page bounce, no long-press menu
   for (const ev of ['gesturestart', 'gesturechange', 'gestureend', 'dblclick', 'contextmenu']) document.addEventListener(ev, e => e.preventDefault(), { passive: false });
   document.addEventListener('touchmove', e => { if (!e.target.closest('#panel')) e.preventDefault(); }, { passive: false });
 </script>
-<script type="module" src="main.js"></script>
+<script type="module" src="main.js?v=1.9.1"></script>
 </body>
 </html>
