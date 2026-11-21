@@ -24,7 +24,7 @@ Models from [BlendSwap](https://www.blendswap.com), converted for the game (reco
 
 - **Monkey** (M): "realistic monkey", downloaded by Johnny (source/licence to confirm), mesh trimmed for the game.
 
-- **Fish** (F): fish model (Fish.fbx, "pez_02" textures), downloaded by Johnny (source/licence to confirm).
+- **Fish** (F): "fish_1" from the Aquatic Props Pack by avtandil on Sketchfab, downloaded by Johnny (licence to confirm).
 
 - **Yak** (Y): "snowy yak / ox" model (Meshy AI highland yak), downloaded by Johnny (source/licence to confirm).
 

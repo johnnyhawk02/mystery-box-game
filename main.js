@@ -185,7 +185,7 @@ const SETUP_DEFAULTS = {
   vase: {size: 1.6, turn: 0, tiltX: -3, tiltZ: 0, lift: 0, offX: 0, offZ: 0},
   wateringcan: {size: 1.9, turn: 314, tiltX: 0, tiltZ: 0, lift: 0.04, offX: -0.035, offZ: 0.045},
   xray: {size: 1.05, turn: 49, tiltX: 12, tiltZ: 0, lift: 0.2, offX: -0.06, offZ: 0},
-  fish: {size: 1.3, turn: -50, tiltX: 0, tiltZ: 0, lift: 0.03, offX: 0, offZ: 0},
+  fish: {size: 1.3, turn: 90, tiltX: -40, tiltZ: 0, lift: 0.06, offX: 0, offZ: 0},
 };
 const BLANK = { size: 1, turn: 0, tiltX: 0, tiltZ: 0, lift: 0, offX: 0, offZ: 0 };
 let setup = {};
