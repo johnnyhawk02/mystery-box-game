@@ -145,14 +145,24 @@ caseBtn.addEventListener('click', () => {
   try { localStorage.setItem('mb-case', lowerCase ? 'lower' : 'upper'); } catch (e) {}
 });
 
+// ---------------- grown-ups' size settings ----------------
+// Per-object size multipliers. SIZE_DEFAULTS can be filled from the panel's "Copy" output.
+const SIZE_DEFAULTS = {};
+let sizes = {};
+try { sizes = JSON.parse(localStorage.getItem('mb-sizes') || '{}'); } catch (e) {}
+const sizeOf = name => sizes[name] ?? SIZE_DEFAULTS[name] ?? 1;
+function saveSizes() { try { localStorage.setItem('mb-sizes', JSON.stringify(sizes)); } catch (e) {} }
+
 // objects load only when a round needs them, so the game starts fast on a phone
 const loaded = {};
 function getItem(o) {
   return loaded[o.name] ??= load(`assets/objects/${o.name}.glb`).then(g => {
-    const node = new THREE.Group(); node.add(g.scene); shadowy(node);
+    // node is moved and scaled by the game; inner carries the grown-ups' size setting for this object
+    const node = new THREE.Group(), inner = new THREE.Group(); inner.add(g.scene); node.add(inner); shadowy(node);
     node.visible = false; scene.add(node);
-    const height = new THREE.Box3().setFromObject(node).getSize(new THREE.Vector3()).y;
-    return { ...o, node, height, placed: false };
+    const baseHeight = new THREE.Box3().setFromObject(node).getSize(new THREE.Vector3()).y;
+    inner.scale.setScalar(sizeOf(o.name));
+    return { ...o, node, inner, baseHeight, placed: false, get height() { return this.baseHeight * sizeOf(this.name); } };
   });
 }
 let round = [], roundReady = null;
@@ -385,3 +395,54 @@ window.__mb = { get state() { return state; }, get current() { return current &&
   currentScreen() { const n = current.node; return this.screenOf(n.position.clone().setY(n.position.y + current.height * n.scale.x / 2)); },
   boxScreen() { return this.screenOf(BOX_AT.clone().setY(0.4)); } };
 window.__mb.debugFlaps = () => flaps.map(f => { const v = f.getWorldPosition(new THREE.Vector3()); return [f.name, f.parent && f.parent.name, +v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2)]; });
+
+// ---------------- settings panel (long-press the small gear, so a child won't open it by accident) ----------------
+const gear = document.getElementById('gear'), panel = document.getElementById('panel'), rows = document.getElementById('rows');
+let pressTimer = null;
+gear.addEventListener('pointerdown', () => { pressTimer = setTimeout(openPanel, 800); });
+for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) gear.addEventListener(ev, () => clearTimeout(pressTimer));
+let preview = null;   // the object being sized sits in its letter slot so you can judge it
+async function showPreview(o) {
+  const it = await getItem(o);
+  if (preview && preview.it !== it) endPreview();
+  if (!preview) preview = { it, pos: it.node.position.clone(), scale: it.node.scale.x, visible: it.node.visible, rot: it.node.rotation.y };
+  if (current === it) return;
+  it.node.visible = true;
+  if (current) { it.node.position.copy(slots[it.letter]); it.node.scale.setScalar(PLACED_SCALE); }   // shown spot is taken
+  else { it.node.position.copy(shownPos(it)); it.node.scale.setScalar(REVEAL_SCALE); }               // big, above the box
+}
+function endPreview() {
+  if (!preview) return;
+  const { it, pos, scale, visible, rot } = preview;
+  if (current !== it) { it.node.position.copy(pos); it.node.scale.setScalar(scale); it.node.visible = visible; it.node.rotation.y = rot; }
+  preview = null;
+}
+function setSize(o, v) {
+  sizes[o.name] = v; saveSizes();
+  if (loaded[o.name]) loaded[o.name].then(it => it.inner.scale.setScalar(v));
+}
+function buildRows() {
+  rows.innerHTML = '';
+  for (const o of OBJECTS) {
+    const row = document.createElement('label'); row.className = 'row';
+    const v = sizeOf(o.name);
+    row.innerHTML = `<span class="nm">${o.letter} &nbsp;${o.word}</span><input type="range" min="0.4" max="2.5" step="0.05" value="${v}"><span class="val">${v.toFixed(2)}</span>`;
+    const input = row.querySelector('input'), val = row.querySelector('.val');
+    input.addEventListener('input', () => { const x = +input.value; val.textContent = x.toFixed(2); setSize(o, x); showPreview(o); });
+    input.addEventListener('pointerdown', () => showPreview(o));
+    rows.appendChild(row);
+  }
+}
+function openPanel() { buildRows(); panel.hidden = false; }
+document.getElementById('closePanel').addEventListener('click', () => { panel.hidden = true; endPreview(); });
+document.getElementById('resetSizes').addEventListener('click', () => {
+  sizes = {}; saveSizes();
+  for (const o of OBJECTS) if (loaded[o.name]) loaded[o.name].then(it => it.inner.scale.setScalar(sizeOf(o.name)));
+  buildRows();
+});
+document.getElementById('copySizes').addEventListener('click', async () => {
+  const all = Object.fromEntries(OBJECTS.map(o => [o.name, +sizeOf(o.name).toFixed(2)]));
+  const text = JSON.stringify(all);
+  document.getElementById('sizesOut').value = text;
+  try { await navigator.clipboard.writeText(text); } catch (e) {}
+});
