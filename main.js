@@ -172,7 +172,7 @@ const SETUP_DEFAULTS = {
   pear: {size: 1.3, turn: 0, tiltX: -10, tiltZ: 0, lift: 0.055},
   rock: {size: 1.15, turn: 66, tiltX: 0, tiltZ: 0, lift: 0.045},
   spoon: {size: 1.35, turn: 52, tiltX: 0, tiltZ: 0, lift: 0.05},
-  table: {size: 1.5, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
+  table: {size: 1.1, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
   cake: {size: 1.4, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
   ukulele: {size: 1.8, turn: 0, tiltX: -3, tiltZ: 1, lift: 0.145},
   vase: {size: 1.6, turn: 0, tiltX: -3, tiltZ: 0, lift: 0},
