@@ -2,6 +2,7 @@
 // Calm by design: slow eased motion, no flashing, no fail sounds. A wrong drop just floats back.
 import * as THREE from 'three';
 import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
+import { RoomEnvironment } from './vendor/environments/RoomEnvironment.js';
 
 // every object the game knows; each round picks ROUND_SIZE of them with different letters
 const OBJECTS = [
@@ -60,6 +61,10 @@ sun.shadow.radius = 6; sun.shadow.bias = -0.0005;
 scene.add(sun);
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: BG, roughness: 1 }));
 ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+
+// soft room reflections so metal (spoon, watering can) looks like metal rather than dark grey
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.12;
 
 const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
 
@@ -171,7 +176,7 @@ const SETUP_DEFAULTS = {
   onion: {size: 1.7, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
   pear: {size: 1.3, turn: 0, tiltX: -10, tiltZ: 0, lift: 0.055},
   rock: {size: 1.2, turn: 20, tiltX: 0, tiltZ: 0, lift: 0.01},
-  spoon: {size: 1.35, turn: 52, tiltX: 0, tiltZ: 0, lift: 0.05},
+  spoon: {size: 1.6, turn: 30, tiltX: 0, tiltZ: 0, lift: 0.01},
   table: {size: 1.1, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
   cake: {size: 1.4, turn: 0, tiltX: 0, tiltZ: 0, lift: 0},
   ukulele: {size: 1.8, turn: 0, tiltX: -3, tiltZ: 1, lift: 0.145},
