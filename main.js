@@ -150,6 +150,7 @@ function showCase() {
     board.getObjectByName('lower_' + ch).visible = lowerCase;
   }
   caseBtn.textContent = lowerCase ? 'abc' : 'ABC';
+  if (shownWord) showName(shownWord);
 }
 showCase();
 caseBtn.addEventListener('click', () => {
@@ -406,6 +407,15 @@ async function beamOut(it) {
 }
 
 // a very gentle hint: the tile (and its letter) lifts a few millimetres, rocks a touch and settles
+// the shown object's name, top left (follows the capitals / small letters switch)
+const nameEl = document.getElementById('objname');
+var shownWord = '';   // var: the case switch can read it before this line runs
+function showName(w) {
+  shownWord = w;
+  if (!w) { nameEl.classList.remove('on'); return; }
+  nameEl.textContent = lowerCase ? w.toLowerCase() : w.toUpperCase();
+  nameEl.classList.add('on');
+}
 function nudge(ch) {
   const parts = ['tile_', 'upper_', 'lower_'].map(k => board.getObjectByName(k + ch));
   const base = parts.map(o => ({ y: o.position.y, rz: o.rotation.z }));
@@ -448,7 +458,7 @@ async function reveal() {
   if (cam().reveal === 'beam') {   // shimmer into view on the pad
     pressPad();
     await beamIn(current, shownPos(current), revealScale());
-    say(current.word); state = 'waiting'; return;
+    showName(current.word); say(current.word); state = 'waiting'; return;
   }
   // the lid swings fully open (felt flaps part too), the object eases up and out, then the lid closes
   flapsTo(1, 0.9);
@@ -457,7 +467,7 @@ async function reveal() {
     tween(1.4, t => { n.rotation.y = r0 + (r1 - r0) * ease(t); }); }
   await moveTo(n, shownPos(current), revealScale(), 1.4);
   flapsTo(0, 1.0); play('close');
-  say(current.word);
+  showName(current.word); say(current.word);
   state = 'waiting';
 }
 const shownPos = it => cam().reveal === 'beam'
@@ -477,7 +487,7 @@ async function drop() {
     const r0 = n.rotation.y, r1 = Math.round(r0 / (2 * Math.PI)) * 2 * Math.PI;   // settle at its set-up angle
     tween(0.7, t => { n.rotation.y = r0 + (r1 - r0) * ease(t); });
     await moveTo(n, slots[best], PLACED_SCALE, 0.7, 0.1);
-    it.placed = true; current = null;
+    it.placed = true; current = null; showName('');
     say(`${it.letter}. ${it.word}`);
     await wait(0.4);
     if (round.every(i => i.placed)) return finish();
