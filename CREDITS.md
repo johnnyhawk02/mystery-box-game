@@ -11,7 +11,6 @@ Models from [Poly Haven](https://polyhaven.com) (CC0, public domain), trimmed an
 - **lemon** (L): "Lemon" by Kuutti Siitonen, CC0. https://polyhaven.com/a/lemon
 - **onion** (O): "Yellow Onion" by Kuutti Siitonen, CC0. https://polyhaven.com/a/yellow_onion
 - **pear** (P): "Pears Asian 01" by Amal Kumar, CC0. https://polyhaven.com/a/food_pears_asian_01
-- **rock** (R): "Rock 07" by Jenelle van Heerden, CC0. https://polyhaven.com/a/rock_07
 - **spoon** (S): "Wooden Spoon" by Ronnie Barter, CC0. https://polyhaven.com/a/wooden_spoon
 - **ukulele** (U): "Ukulele 01" by Joseph Burgan, CC0. https://polyhaven.com/a/Ukulele_01
 - **vase** (V): "Ceramic Vase 01" by James Ray Cock, CC0. https://polyhaven.com/a/ceramic_vase_01
@@ -24,5 +23,5 @@ Models from [BlendSwap](https://www.blendswap.com), converted for the game (reco
 - **Egg** (E): "The Egg", Blend Swap #80990, CC-BY 3.0, by the original uploader (credited as required). https://www.blendswap.com/blends/view/80990
 - **Coffee mug** (M, "mug"): "Coffee Mug", from BlendSwap. Author and licence to be confirmed.
 
-Everything else (box with felt door, board, fish, the square table) was made for this game in `blender/build_game_models.py`.
+Everything else (box with felt door, board, fish, the square table, the grey rock) was made for this game in `blender/build_game_models.py`.
 Three.js is MIT licensed (`vendor/THREE-LICENSE`).
