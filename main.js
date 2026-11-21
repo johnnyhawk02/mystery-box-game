@@ -103,6 +103,7 @@ scene.updateMatrixWorld(true);
 
 const revealPoint = box.getObjectByName('reveal_point').getWorldPosition(new THREE.Vector3());
 const insideBox = BOX_AT.clone().add(new THREE.Vector3(0, 0.12, 0));
+const aboveBox = BOX_AT.clone().add(new THREE.Vector3(0, 0.95, 0));
 const slots = {}, tiles = {};
 for (const ch of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
   slots[ch] = board.getObjectByName('slot_' + ch).getWorldPosition(new THREE.Vector3());
@@ -178,12 +179,12 @@ async function drop() {
   const it = current, n = it.node;
   let best = null, bestD = DROP_RADIUS;
   for (const [ch, p] of Object.entries(slots)) {
-    const d = Math.hypot(p.x - n.position.x, p.z - n.position.z);
+    const d = Math.hypot(p.x - dragTarget.x, p.z - dragTarget.z);
     if (d < bestD) { best = ch; bestD = d; }
   }
   for (const t of Object.values(tiles)) t.target = 0;
   if (best === it.letter) {
-    await moveTo(n, slots[best], 1, 0.7);
+    await moveTo(n, slots[best], 1, 0.7, 0.1);
     it.placed = true; current = null;
     say(`${it.letter}. ${it.word}`);
     await play('close');
@@ -191,7 +192,7 @@ async function drop() {
     state = 'idle'; lastActive = clock;
   } else {
     tries++;
-    await moveTo(n, shownPos(it), REVEAL_SCALE, 0.9, 0.15);
+    await moveTo(n, shownPos(it), REVEAL_SCALE, 1.0, 0.35);
     if (tries >= 2) tiles[it.letter].target = 1;   // gentle prompt: the right letter softly glows
     say(it.word);
     state = 'waiting';
@@ -203,7 +204,8 @@ async function finish() {
   await wait(2.5);
   await play('open');
   for (const it of items) {
-    await moveTo(it.node, insideBox, 0.6, 0.9, 0.5);
+    await moveTo(it.node, aboveBox, 0.8, 1.0, 0.25);
+    await moveTo(it.node, insideBox, 0.6, 0.6);
     it.node.visible = false; it.placed = false;
   }
   await play('close');
@@ -215,7 +217,10 @@ async function finish() {
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 // the finger picks a spot on the board surface; the object hovers just above that spot
 const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.07);
-const dragTarget = new THREE.Vector3();
+const dragTarget = new THREE.Vector3();   // spot on the board under the finger
+const holdPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), holdHit = new THREE.Vector3();
+let dragY = DRAG_Y;
+const overBox = p => Math.abs(p.x - BOX_AT.x) < 0.65 && Math.abs(p.z - BOX_AT.z) < 0.65;
 function pointer(e) {
   const r = canvas.getBoundingClientRect();
   ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
@@ -235,6 +240,7 @@ canvas.addEventListener('pointerdown', e => {
     if (ray.intersectObject(current.node, true).length > 0 || screenDist(e, centre) < 90) {
       state = 'dragging'; canvas.setPointerCapture(e.pointerId);
       ray.ray.intersectPlane(dragPlane, dragTarget);
+      dragY = current.node.position.y;
     }
   }
 });
@@ -258,14 +264,21 @@ renderer.setAnimationLoop(now => {
   }
   if (state === 'dragging' && current) {
     const n = current.node;
-    n.position.x += (dragTarget.x - n.position.x) * Math.min(1, dt * 14);
-    n.position.z += (dragTarget.z - n.position.z) * Math.min(1, dt * 14);
-    n.position.y += (DRAG_Y - n.position.y) * Math.min(1, dt * 8);
     const s = n.scale.x + (DRAG_SCALE - n.scale.x) * Math.min(1, dt * 6); n.scale.setScalar(s);
+    const wantY = overBox(n.position) || overBox(dragTarget) ? 0.75 : DRAG_Y;
+    dragY += (wantY - dragY) * Math.min(1, dt * 6);
+    // put the object's middle on the finger's line of sight, so it never jumps away from the finger
+    const mid = current.height * s / 2;
+    holdPlane.constant = -(dragY + mid);
+    if (ray.ray.intersectPlane(holdPlane, holdHit)) {
+      n.position.x += (holdHit.x - n.position.x) * Math.min(1, dt * 16);
+      n.position.z += (holdHit.z - n.position.z) * Math.min(1, dt * 16);
+    }
+    n.position.y = dragY;
     // softly brighten the tile the object is over
     let over = null, bestD = DROP_RADIUS;
     for (const [ch, p] of Object.entries(slots)) {
-      const d = Math.hypot(p.x - n.position.x, p.z - n.position.z);
+      const d = Math.hypot(p.x - dragTarget.x, p.z - dragTarget.z);
       if (d < bestD) { over = ch; bestD = d; }
     }
     for (const [ch, t] of Object.entries(tiles)) if (!(tries >= 2 && ch === current.letter)) t.target = ch === over ? 0.6 : 0;
