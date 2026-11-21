@@ -195,7 +195,8 @@ BOX_OBJS = [rig, body, lid, reveal] + FLAPS
 # =====================================================================
 # ALPHABET BOARD
 # =====================================================================
-COLS, ROWS, CW, CH, GAP = 9, 3, 0.42, 0.52, 0.03   # wide 3-row layout suits a phone in landscape
+COLS, ROWS, CW, CH, GAP = 7, 4, 0.42, 0.52, 0.03   # 4 rows: 7, 7, 6, 6
+ROW_STARTS = [0, 7, 14, 20]
 BW = COLS*CW + 0.22; BD = ROWS*CH + 0.22; BT = 0.07
 board_root = empty('AlphabetBoard', (0, 0, 0), 0.3)
 base = mesh_obj('board_base', box_bm(BW, BD, BT, at=(0, 0, BT/2)), C['board']); bevel(base, 0.02, 3)
@@ -207,8 +208,8 @@ BOARD_OBJS = [board_root, base, rimo]
 SLOTS = {}
 TILE_T = 0.025; TOP = BT + TILE_T
 for i, ch in enumerate('ABCDEFGHIJKLMNOPQRSTUVWXYZ'):
-    row, c = divmod(i, COLS)
-    cx = c + (0.5 if row == ROWS - 1 else 0)   # last row has 8 letters: centre it
+    row = max(r for r in range(ROWS) if i >= ROW_STARTS[r]); c = i - ROW_STARTS[row]
+    cx = c + (0.5 if row >= 2 else 0)   # the 6-letter rows sit centred
     x = -BW/2 + 0.11 + CW*(cx + 0.5); y = BD/2 - 0.11 - CH*(row + 0.5)
     t = mesh_obj('tile_' + ch, box_bm(CW - GAP, CH - GAP, TILE_T, at=(0, 0, TILE_T/2)), [TILE[i % 4], C['dip']])
     t.location = (x, y, BT)

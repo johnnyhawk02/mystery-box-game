@@ -28,7 +28,7 @@ const OBJECTS = [
 ];
 const ROUND_SIZE = 6;
 const SPIN_SECONDS = 7;     // one slow turn while the object waits to be dragged
-const BOX_AT = new THREE.Vector3(-2.5, 0, -0.15);
+const BOX_AT = new THREE.Vector3(-2.2, 0, -0.15);
 const BOX_SCALE = 0.85;
 const BOARD_AT = new THREE.Vector3(0, 0, -0.15);
 const REVEAL_SCALE = 2.3;   // objects are shown big when they come out of the box
@@ -195,7 +195,7 @@ function fit() {
     let lo = 1, hi = 40;
     for (let i = 0; i < 30; i++) {
       const d = (lo + hi) / 2; place(d);
-      const ok = fitPoints.every(p => { v.copy(p).project(camera); return Math.abs(v.x) < 0.95 && v.y < 0.84 && v.y > -0.96; });
+      const ok = fitPoints.every(p => { v.copy(p).project(camera); return Math.abs(v.x) < 0.95 && v.y < 0.78 && v.y > -0.96; });
       if (ok) hi = d; else lo = d;
     }
     place(hi);
