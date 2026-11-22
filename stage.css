@@ -1,0 +1,25 @@
+/* shared look for the Words and Talker pages (the letters game keeps its own) */
+html, body { margin: 0; height: 100%; overflow: hidden; background: #d9d2c5; overscroll-behavior: none;
+       -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: none; }
+button { touch-action: manipulation; }
+canvas { display: block; width: 100vw; height: 100dvh; touch-action: none; }
+#ver { position: fixed; right: 10px; bottom: 6px; font: 11px system-ui, sans-serif; color: #8d8577; pointer-events: none; }
+.btn { position: fixed; top: 10px; width: 40px; height: 40px; border: 0; border-radius: 12px; padding: 0;
+       background: rgba(255,255,255,.45); color: #6c6658; font: 20px/40px system-ui, sans-serif; text-align: center; text-decoration: none; }
+#full { right: 10px; }
+#sound { right: 58px; font-size: 18px; }
+#case { right: 106px; width: 52px; color: #45506a; font: 600 15px/40px system-ui, sans-serif; }
+#home { position: fixed; left: 10px; top: 10px; width: 64px; height: 64px; border-radius: 18px; background: rgba(255,255,255,.55);
+        display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(80,70,50,.12); }
+#home:active { transform: scale(.94); }
+#gear { left: 22px; top: 84px; opacity: .55; }
+/* grown-ups' panel */
+#panel { position: fixed; top: 8px; left: 8px; max-height: calc(100dvh - 16px); width: min(420px, 60vw); overflow-y: auto; touch-action: pan-y;
+         background: rgba(247,242,232,.97); border-radius: 16px; padding: 10px 14px 14px; box-shadow: 0 4px 18px rgba(0,0,0,.15);
+         font: 14px system-ui, sans-serif; color: #45506a; box-sizing: border-box; z-index: 5; }
+#panel h3 { margin: 12px 0 6px; font-size: 14px; }
+#panel .head { display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
+#panel button { border: 0; border-radius: 10px; padding: 7px 10px; margin: 0 6px 6px 0; background: #e4dccb; color: #45506a; font: 600 13px system-ui, sans-serif; }
+#panel button.on { background: #45506a; color: #f7f2e8; }
+#panel .note { font-size: 12px; color: #7a7466; margin: 0 0 6px; }
+#panel .chips button { padding: 6px 9px; font-weight: 500; }
