@@ -16,7 +16,7 @@ const BOX_SCALE = 0.85;
 const BOARD_AT = new THREE.Vector3(0, 0, -0.15);
 // how big an object is shown when it comes out of the box (and while carried): the View tab's 'Shown size'
 const revealScale = () => cam().shown;
-const PLACED_SCALE = 1.2;  // a little bigger in the slot so it's easy to see
+const PLACED_SCALE = 0.9;  // side on, objects stand taller on screen, so a little smaller in the slot
 const DRAG_Y = 0.32;        // height objects float at while being dragged
 const DROP_RADIUS = 0.3;    // how close to a slot counts as dropping on it
 const HINT_EVERY = 6;       // seconds of no activity before the box gently invites a tap
@@ -138,7 +138,7 @@ caseBtn.addEventListener('click', () => {
 // SETUP_DEFAULTS can be filled from the setup panel's "Copy" output to make them the same on every device.
 // Johnny's settings from 2026-11-21 (evening). Bump DEFAULTS_ID when these change: devices then drop their own
 // saved tweaks so everyone starts from the same defaults.
-const DEFAULTS_ID = '2026-11-22a';
+const DEFAULTS_ID = '2026-11-22b';
 try { if (localStorage.getItem('mb-defaults') !== DEFAULTS_ID) {
   localStorage.removeItem('mb-setup'); localStorage.removeItem('mb-sizes'); localStorage.removeItem('mb-camera');
   localStorage.setItem('mb-defaults', DEFAULTS_ID);
@@ -154,10 +154,24 @@ const setupOf = name => ({ ...BLANK, ...(SETUP_DEFAULTS[name] || {}), ...(setup[
 const sizeOf = name => setupOf(name).size;
 function saveSetup() { try { localStorage.setItem('mb-setup', JSON.stringify(setup)); localStorage.removeItem('mb-sizes'); } catch (e) {} }
 const DEG = Math.PI / 180;
+const HOVER = 0.04, BOB = 0.02;   // side-on objects float gently above the board
+// tip an object towards the camera: fully side on when it looks straight down, upright when it looks from the side
+// flat things (an X-ray sheet, a spoon, gloves) read best seen from above, so they stay lying down
+const LIES_FLAT = new Set(['xray', 'spoon', 'gloves']);
+function standUp(it) {
+  const k = LIES_FLAT.has(it.name) ? 0 : cam().tilt * DEG, size = sizeOf(it.name);
+  it.tilt.rotation.x = -k;
+  it.lift.position.z = -0.05 * Math.sin(k);   // sit towards the back of the space, above its letter
+  it.pivot.position.y = -it.baseHeight * size / 2 * Math.sin(k);   // turn about its middle
+  it.liftBase = (it.baseRadius * size * 0.55 + HOVER) * Math.sin(k);   // clear of the board, hovering a little above it
+}
 function applySetup(it) {
   const c = setupOf(it.name);
+  if (it.tilt) standUp(it);
   it.inner.scale.setScalar(c.size);
-  it.inner.rotation.set(c.tiltX * DEG, c.turn * DEG, c.tiltZ * DEG, 'XYZ');   // turn first, then tilt
+  // the fwd/back tilt was tuned for the old angled camera; side on it would tip things over, so only flat things keep it
+  const tx = it.tilt && !LIES_FLAT.has(it.name) ? c.tiltX * (1 - Math.sin(cam().tilt * DEG)) : c.tiltX;
+  it.inner.rotation.set(tx * DEG, c.turn * DEG, c.tiltZ * DEG, 'XYZ');   // turn first, then tilt
   it.inner.position.set(c.offX, c.lift, c.offZ);
 }
 
@@ -166,10 +180,15 @@ const loaded = {};
 function getItem(o) {
   return loaded[o.name] ??= load(`assets/objects/${o.name}.glb`).then(g => {
     // node is moved and scaled by the game; inner carries the grown-ups' size setting for this object
-    const node = new THREE.Group(), inner = new THREE.Group(); inner.add(g.scene); node.add(inner); shadowy(node);
+    // node > lift > tilt > spin > pivot > inner: with the camera looking straight down, each object is tipped
+    // towards it (tilt) so it is seen side on, like a stand-up picture; spin turns it about its own up axis
+    const node = new THREE.Group(), lift = new THREE.Group(), tilt = new THREE.Group(), spin = new THREE.Group(),
+          pivot = new THREE.Group(), inner = new THREE.Group();
+    inner.add(g.scene); pivot.add(inner); spin.add(pivot); tilt.add(spin); lift.add(tilt); node.add(lift); shadowy(node);
     node.visible = false; scene.add(node);
-    const baseHeight = new THREE.Box3().setFromObject(node).getSize(new THREE.Vector3()).y;
-    const it = { ...o, node, inner, baseHeight, placed: false, get height() { return this.baseHeight * sizeOf(this.name); } };
+    const bb = new THREE.Box3().setFromObject(node), sz = bb.getSize(new THREE.Vector3());
+    const baseHeight = sz.y, baseRadius = Math.hypot(sz.x, sz.z) / 2;
+    const it = { ...o, node, inner, lift, tilt, spin, pivot, baseHeight, baseRadius, placed: false, get height() { return this.baseHeight * sizeOf(this.name); } };
     applySetup(it); allItems.push(it); return it;
   });
 }
@@ -200,7 +219,7 @@ for (const dx of [-0.45, 0.45]) fitPoints.push(revealPoint.clone().add(new THREE
 const lookAt = new THREE.Box3().setFromPoints(fitPoints).getCenter(new THREE.Vector3());
 lookAt.y = 0.25;
 // camera: tilt (degrees above the table), turn, zoom and pan, all adjustable in setup
-const CAMERA_DEFAULTS = {tilt: 70, turn: 0, zoom: 1, panX: 0, panZ: 0, shown: 1.55, reveal: 'beam'};
+const CAMERA_DEFAULTS = {tilt: 89, turn: 0, zoom: 1, panX: 0, panZ: 0, shown: 1.55, reveal: 'beam'};
 const CAM_BLANK = { tilt: 66, turn: 0, zoom: 1, panX: 0, panZ: 0, shown: 1.4, reveal: 'beam', perRound: 26 };   // reveal: 'beam' or 'box'
 let camSet = {};
 try { camSet = JSON.parse(localStorage.getItem('mb-camera') || '{}'); } catch (e) {}
@@ -225,6 +244,7 @@ function rebuildFitPoints() {
   baseLook.copy(new THREE.Box3().setFromPoints(fitPoints).getCenter(new THREE.Vector3())); baseLook.y = 0.25;
 }
 function fit() {
+  allItems.forEach(applySetup);   // objects follow the camera's tilt
   rebuildFitPoints();
   const c = cam();
   viewDir.set(Math.sin(c.turn * Math.PI / 180) * Math.cos(c.tilt * Math.PI / 180), Math.sin(c.tilt * Math.PI / 180),
@@ -290,14 +310,14 @@ const holeBelow = BOX_AT.clone().add(new THREE.Vector3(0, 0.25, 0));
 const pileScale = it => Math.min(0.85, 0.9 / sizeOf(it.name));
 function fillPile(items) {
   if (cam().reveal === 'beam') {   // nothing waits in a box: objects shimmer into view on the pad
-    items.forEach(it => { it.node.visible = false; it.placed = false; it.node.rotation.set(0, 0, 0); });
+    items.forEach(it => { it.node.visible = false; it.placed = false; it.spin.rotation.set(0, 0, 0); });
     return;
   }
   const spots = shuffle([[-0.16, -0.12], [0, -0.14], [0.16, -0.1], [-0.15, 0.12], [0.02, 0.13], [0.17, 0.12]]);
   items.forEach((it, i) => {
     const [x, z] = spots[i % spots.length];
     it.pileAt = BOX_AT.clone().add(new THREE.Vector3(x + (Math.random() - 0.5) * 0.04, PILE_FLOOR + (i % 2) * 0.03, z));
-    it.node.position.copy(it.pileAt); it.node.rotation.set(0, Math.random() * Math.PI * 2, 0);
+    it.node.position.copy(it.pileAt); it.spin.rotation.set(0, Math.random() * Math.PI * 2, 0);
     it.node.scale.setScalar(pileScale(it)); it.node.visible = true; it.placed = false;
   });
 }
@@ -369,7 +389,7 @@ function setFade(it, f) {
   });
 }
 async function beamIn(it, at, scale) {
-  const n = it.node; n.position.copy(at); n.scale.setScalar(scale); n.rotation.set(0, 0, 0);
+  const n = it.node; n.position.copy(at); n.scale.setScalar(scale); it.spin.rotation.set(0, 0, 0);
   setFade(it, 0); n.visible = true;
   const h = it.height * scale, r = Math.max(0.12, h * 0.45);
   const glow = shimmer(at.clone(), h * 1.25, r, 2.8);
@@ -454,8 +474,8 @@ async function reveal() {
   // the lid swings fully open (felt flaps part too), the object eases up and out, then the lid closes
   flapsTo(1, 0.9);
   await Promise.all([play('open'), moveTo(n, holeBelow.clone().setY(holeBelow.y - 0.05), pileScale(current), 1.0)]);
-  { const r0 = n.rotation.y, r1 = Math.round(r0 / (2 * Math.PI)) * 2 * Math.PI;   // face its set-up angle as it comes out
-    tween(1.4, t => { n.rotation.y = r0 + (r1 - r0) * ease(t); }); }
+  { const sp = current.spin, r0 = sp.rotation.y, r1 = Math.round(r0 / (2 * Math.PI)) * 2 * Math.PI;   // face its set-up angle as it comes out
+    tween(1.4, t => { sp.rotation.y = r0 + (r1 - r0) * ease(t); }); }
   await moveTo(n, shownPos(current), revealScale(), 1.4);
   flapsTo(0, 1.0); play('close');
   showName(current.word); say(current.word);
@@ -475,8 +495,8 @@ async function drop() {
   }
   for (const t of Object.values(tiles)) t.target = 0;
   if (best === it.letter) {
-    const r0 = n.rotation.y, r1 = Math.round(r0 / (2 * Math.PI)) * 2 * Math.PI;   // settle at its set-up angle
-    tween(0.7, t => { n.rotation.y = r0 + (r1 - r0) * ease(t); });
+    const sp = it.spin, r0 = sp.rotation.y, r1 = Math.round(r0 / (2 * Math.PI)) * 2 * Math.PI;   // settle at its set-up angle
+    tween(0.7, t => { sp.rotation.y = r0 + (r1 - r0) * ease(t); });
     await moveTo(n, slots[best], PLACED_SCALE, 0.7, 0.1);
     it.placed = true; current = null; showName('');
     say(`${it.letter}. ${it.word}`);
@@ -533,7 +553,7 @@ function screenDist(e, worldPos) {
 // touching an object already on its letter makes it turn round once: slow, faster, slow
 function spinPlaced(it) {
   if (it.spinning) return;
-  it.spinning = true; const n = it.node, r0 = n.rotation.y;
+  it.spinning = true; const n = it.spin, r0 = n.rotation.y;
   tween(1.6, t => { n.rotation.y = r0 + 2 * Math.PI * ease(t); }).then(() => { n.rotation.y = r0; it.spinning = false; });
 }
 canvas.addEventListener('pointerdown', e => {
@@ -614,12 +634,14 @@ renderer.setAnimationLoop(now => {
     for (const m of t.mats) m.emissiveIntensity = t.glow * 0.45;
   }
   // the shown object turns slowly so it can be seen from all sides; it holds still while carried
-  if (current && current.node.visible && state !== 'dragging' && !current.placed) current.node.rotation.y += dt * 2 * Math.PI / SPIN_SECONDS;
+  if (current && current.node.visible && state !== 'dragging' && !current.placed) current.spin.rotation.y += dt * 2 * Math.PI / SPIN_SECONDS;
   // the pad's rim breathes softly; a little brighter while it's waiting to be pressed
   pad.userData.rim.material.emissiveIntensity = (state === 'idle' ? 0.35 : 0.15) + 0.2 * (0.5 + 0.5 * Math.sin(clock * 1.6));
   if (state === 'idle' && clock - lastActive > HINT_EVERY && cam().reveal === 'box') {   // the felt stirs a little, inviting a tap
     lastActive = clock; flapsTo(0.12, 0.8).then(() => state === 'idle' && flapsTo(0, 1.0));
   }
+  // every side-on object floats softly up and down, each at its own pace
+  for (const it of allItems) if (it.node.visible) it.lift.position.y = it.liftBase + BOB * Math.sin(clock * 0.9 + it.letter.charCodeAt(0)) * Math.sin(cam().tilt * DEG);
   updateFlags(dt);
   renderer.render(scene, camera);
 });
@@ -771,7 +793,7 @@ async function enterSetup() {
     const same = setupItems.filter(i => i.letter === it.letter), k = same.indexOf(it);
     const dx = same.length > 1 ? (k - (same.length - 1) / 2) * 0.22 : 0;
     it.node.visible = true; it.node.position.copy(slots[it.letter]).add(new THREE.Vector3(dx, 0, 0));
-    it.node.scale.setScalar(PLACED_SCALE * (same.length > 1 ? 0.75 : 1)); it.node.rotation.set(0, 0, 0);
+    it.node.scale.setScalar(PLACED_SCALE * (same.length > 1 ? 0.75 : 1)); it.spin.rotation.set(0, 0, 0);
   }
   pick(null); showTab('object'); panel.hidden = false;
 }
