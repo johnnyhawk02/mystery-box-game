@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#d9d2c5">
+<title>Find the Word</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg">
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #d9d2c5; overscroll-behavior: none;
+         -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: none; }
+  button { touch-action: manipulation; }
+  canvas { display: block; width: 100vw; height: 100dvh; touch-action: none; }
+  #ver { position: fixed; right: 10px; bottom: 6px; font: 11px system-ui, sans-serif; color: #8d8577; pointer-events: none; }
+  .btn { position: fixed; top: 10px; width: 40px; height: 40px; border: 0; border-radius: 12px; padding: 0;
+         background: rgba(255,255,255,.45); color: #6c6658; font: 20px/40px system-ui, sans-serif; text-align: center; text-decoration: none; }
+  #full { right: 10px; }
+  #sound { right: 58px; font-size: 18px; }
+  #case { right: 106px; width: 52px; color: #45506a; font: 600 15px/40px system-ui, sans-serif; }
+  #home { right: 166px; font-size: 22px; }
+  /* the word: big, centred over the three objects; tap it to hear it again */
+  #word { position: fixed; left: 50%; top: 4dvh; transform: translateX(-50%); white-space: nowrap;
+          font: 700 clamp(40px, min(15dvh, 8vw), 130px)/1.1 system-ui, -apple-system, sans-serif; color: #45506a; letter-spacing: 0.05em;
+          opacity: 0; transition: opacity .9s ease; }
+  #word.on { opacity: 1; }
+</style>
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="word"></div>
+<a id="home" class="btn" href="./" aria-label="Choose a game">⌂</a>
+<button id="case" class="btn" aria-label="Capitals or small letters">ABC</button>
+<button id="sound" class="btn" aria-label="Sound on or off">🔊</button>
+<button id="full" class="btn" aria-label="Full screen">⛶</button>
+<div id="ver">v1.52.0</div>
+<script>
+  // iPad/iPhone Safari: no pinch or double-tap zoom, no page bounce, no long-press menu
+  for (const ev of ['gesturestart', 'gesturechange', 'gestureend', 'dblclick', 'contextmenu']) document.addEventListener(ev, e => e.preventDefault(), { passive: false });
+  document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+</script>
+<script type="module" src="words.js?v=1.52.0"></script>
+</body>
+</html>

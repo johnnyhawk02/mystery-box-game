@@ -10,59 +10,26 @@
 <style>
   html, body { margin: 0; height: 100%; overflow: hidden; background: #d9d2c5; overscroll-behavior: none;
          -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: none; }
-  button { touch-action: manipulation; }
-  canvas { display: block; width: 100vw; height: 100dvh; touch-action: none; -webkit-user-select: none; user-select: none; }
+  main { height: 100dvh; display: flex; align-items: center; justify-content: center; gap: 5vw; padding: 0 4vw; box-sizing: border-box; }
+  /* one big card per game: a picture of it and its name */
+  a.game { display: flex; flex-direction: column; align-items: center; gap: 2.2dvh; text-decoration: none; color: #45506a;
+           background: rgba(255,255,255,.4); border-radius: 28px; padding: 2.5dvh 2.5dvh 3dvh; box-shadow: 0 6px 22px rgba(80,70,50,.12);
+           transition: transform .5s ease; }
+  a.game:active { transform: scale(.97); }
+  a.game img { display: block; width: min(38vw, 50dvh * 1.44); aspect-ratio: 1.44; object-fit: cover; border-radius: 18px; }
+  a.game span { font: 700 clamp(28px, 7dvh, 60px)/1 system-ui, -apple-system, sans-serif; letter-spacing: .03em; }
   #ver { position: fixed; right: 10px; bottom: 6px; font: 11px system-ui, sans-serif; color: #8d8577; pointer-events: none; }
-  #full { position: fixed; right: 10px; top: 10px; width: 40px; height: 40px; border: 0; border-radius: 12px;
-          background: rgba(255,255,255,.45); color: #6c6658; font-size: 20px; line-height: 40px; padding: 0; }
-  #case { position: fixed; right: 106px; top: 10px; width: 52px; height: 40px; border: 0; border-radius: 12px;
-          background: rgba(255,255,255,.45); color: #45506a; font: 600 15px system-ui, sans-serif; padding: 0; }
-  #objname { position: fixed; left: 62px; top: 8px; font: 700 clamp(44px, 8vh, 72px)/1.1 system-ui, -apple-system, sans-serif; color: #45506a;
-             letter-spacing: 0.04em; opacity: 0; transition: opacity .8s ease; pointer-events: none; }
-  #objname.on { opacity: 1; }
-  #gear { position: fixed; left: 10px; top: 10px; width: 40px; height: 40px; border: 0; border-radius: 12px;
-          background: rgba(255,255,255,.45); color: #6c6658; font-size: 20px; line-height: 40px; padding: 0; }
-  #panel { position: fixed; top: 8px; left: 8px; max-height: calc(100dvh - 16px); width: min(340px, 40vw); overflow-y: auto; touch-action: pan-y;
-           background: rgba(247,242,232,.96); border-radius: 16px; padding: 10px 14px; box-shadow: 0 4px 18px rgba(0,0,0,.15);
-           font: 14px system-ui, sans-serif; color: #45506a; box-sizing: border-box; -webkit-user-select: none; }
-  #panel .head { display: flex; justify-content: space-between; align-items: center; position: sticky; top: -10px; background: inherit; padding: 4px 0 8px; }
-  #panel .head button { margin-left: 4px; border: 0; border-radius: 10px; padding: 7px 9px; background: #e4dccb; color: #45506a; font: 600 13px system-ui, sans-serif; }
-  #panel.right { left: auto; right: 8px; }
-  #panel .head span button:first-child { margin-left: 0; }
-  #panel .head button.on { background: #45506a; color: #f7f2e8; }
-  #pickName { font-weight: 600; padding: 4px 0 2px; }
-  #panel .foot button { margin: 6px 6px 0 0; border: 0; border-radius: 10px; padding: 7px 10px; background: #e4dccb; color: #45506a; font: 600 12px system-ui, sans-serif; }
-  #panel .row button { border: 0; border-radius: 10px; padding: 6px 10px; background: #e4dccb; color: #45506a; font: 600 12px system-ui, sans-serif; }
-  #panel .row button.on { background: #45506a; color: #f7f2e8; }
-  #panel .row { display: grid; grid-template-columns: 6.5em 1fr 3.2em; align-items: center; gap: 8px; padding: 6px 0; }
-  #panel input[type=range] { width: 100%; touch-action: none; }
-  #panel .val { text-align: right; font-variant-numeric: tabular-nums; }
-  #panel textarea { width: 100%; margin-top: 8px; font: 11px ui-monospace, monospace; border: 1px solid #d8cfbd; border-radius: 8px; background: #fbf8f2; color: #45506a; box-sizing: border-box; -webkit-user-select: text; user-select: text; }
-  #sound { position: fixed; right: 58px; top: 10px; width: 40px; height: 40px; border: 0; border-radius: 12px;
-          background: rgba(255,255,255,.45); color: #6c6658; font-size: 18px; line-height: 40px; padding: 0; }
 </style>
-<script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
 </head>
 <body>
-<canvas id="c"></canvas>
-<button id="case" aria-label="Capitals or small letters">ABC</button>
-<button id="sound" aria-label="Sound on or off">🔊</button>
-<button id="full" aria-label="Full screen">⛶</button>
-<div id="objname" aria-live="polite"></div>
-<button id="gear" aria-label="Settings (press and hold)">⚙</button>
-<div id="panel" hidden>
-  <div class="head"><span><button id="tabObject" class="on">Object</button><button id="tabCamera">View</button></span><span><button id="flipPanel" aria-label="Move panel">⇆</button><button id="copySetup">Copy</button><button id="closePanel">Done</button></span></div>
-  <div id="pickName">Tap an object on the board</div>
-  <div id="controls"></div>
-  <div class="foot"><button id="resetOne">Reset this</button><button id="resetAll">Reset all</button></div>
-  <textarea id="setupOut" rows="2" readonly placeholder="Copy puts the settings here too"></textarea>
-</div>
-<div id="ver">v1.51.0</div>
+<main>
+  <a class="game" href="letters.html"><img src="assets/splash/letters.jpg?v=1.52.0" alt=""><span>Letters</span></a>
+  <a class="game" href="words.html"><img src="assets/splash/words.jpg?v=1.52.0" alt=""><span>Words</span></a>
+</main>
+<div id="ver">v1.52.0</div>
 <script>
-  // iPad/iPhone Safari: no pinch or double-tap zoom, no page bounce, no long-press menu
   for (const ev of ['gesturestart', 'gesturechange', 'gestureend', 'dblclick', 'contextmenu']) document.addEventListener(ev, e => e.preventDefault(), { passive: false });
-  document.addEventListener('touchmove', e => { if (!e.target.closest('#panel')) e.preventDefault(); }, { passive: false });
+  document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
 </script>
-<script type="module" src="main.js?v=1.51.0"></script>
 </body>
 </html>

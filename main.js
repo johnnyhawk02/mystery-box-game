@@ -5,35 +5,9 @@ import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
 import { RoomEnvironment } from './vendor/environments/RoomEnvironment.js';
 import { DRACOLoader } from './vendor/loaders/DRACOLoader.js';
 
-// every object the game knows; each round picks roundSize() of them with different letters
-const OBJECTS = [
-  { name: 'apple', letter: 'A', word: 'apple' },
-  { name: 'football', letter: 'B', word: 'ball' },
-  { name: 'cake', letter: 'C', word: 'cake' },
-  { name: 'duck', letter: 'D', word: 'duck' },
-  { name: 'egg', letter: 'E', word: 'egg' },
-  { name: 'fish', letter: 'F', word: 'fish' },
-  { name: 'gloves', letter: 'G', word: 'gloves' },
-  { name: 'hat', letter: 'H', word: 'hat' },
-  { name: 'icecream', letter: 'I', word: 'ice cream' },
-  { name: 'jug', letter: 'J', word: 'jug' },
-  { name: 'kiwi', letter: 'K', word: 'kiwi' },
-  { name: 'lemon', letter: 'L', word: 'lemon' },
-  { name: 'monkey', letter: 'M', word: 'monkey' },
-  { name: 'nest', letter: 'N', word: 'nest' },
-  { name: 'onion', letter: 'O', word: 'onion' },
-  { name: 'pear', letter: 'P', word: 'pear' },
-  { name: 'queen', letter: 'Q', word: 'queen' },
-  { name: 'rock', letter: 'R', word: 'rock' },
-  { name: 'spoon', letter: 'S', word: 'spoon' },
-  { name: 'table', letter: 'T', word: 'table' },
-  { name: 'umbrella', letter: 'U', word: 'umbrella' },
-  { name: 'vase', letter: 'V', word: 'vase' },
-  { name: 'wateringcan', letter: 'W', word: 'watering can' },
-  { name: 'xray', letter: 'X', word: 'X-ray' },
-  { name: 'yak', letter: 'Y', word: 'yak' },
-  { name: 'zebra', letter: 'Z', word: 'zebra' },
-];
+// the objects and their grown-up setup defaults live in objects.js, shared with the word game
+const V = new URL(import.meta.url).searchParams.get('v') || '';
+const { OBJECTS, SETUP_DEFAULTS } = await import('./objects.js' + (V ? '?v=' + V : ''));
 // how many objects make a round (setup → View → Objects per round); 26 = the whole alphabet
 const roundSize = () => cam().perRound;
 const SPIN_SECONDS = 7;     // one slow turn while the object waits to be dragged
@@ -123,7 +97,6 @@ const loader = new GLTFLoader();
 // some detailed models (the nest) are Draco-compressed to keep them small
 loader.setDRACOLoader(new DRACOLoader().setDecoderPath('vendor/draco/').setDecoderConfig({ type: 'wasm' }));
 // the page passes its version (main.js?v=…) so a new release never mixes with cached old models
-const V = new URL(import.meta.url).searchParams.get('v') || '';
 const load = url => new Promise((res, rej) => loader.load(url + (V ? '?v=' + V : ''), res, undefined, rej));
 const [boxG, boardG] = await Promise.all([load('assets/mystery_box.glb'), load('assets/alphabet_board.glb')]);
 const shadowy = root => root.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
@@ -172,34 +145,6 @@ try { if (localStorage.getItem('mb-defaults') !== DEFAULTS_ID) {
   localStorage.removeItem('mb-setup'); localStorage.removeItem('mb-sizes'); localStorage.removeItem('mb-camera');
   localStorage.setItem('mb-defaults', DEFAULTS_ID);
 } } catch (e) {}
-const SETUP_DEFAULTS = {
-  apple: {size: 1.15, turn: 0, tiltX: 0, tiltZ: 0, lift: 0, offX: 0, offZ: 0},
-  football: {size: 1.3, turn: 0, tiltX: 0, tiltZ: 0, lift: 0.04, offX: 0, offZ: 0},
-  cake: {size: 1.55, turn: 32, tiltX: 0, tiltZ: 0, lift: 0.075, offX: 0, offZ: 0.06},
-  duck: {size: 1.25, turn: 0, tiltX: 0, tiltZ: 0, lift: 0, offX: 0, offZ: 0},
-  egg: {size: 1.45, turn: 0, tiltX: 0, tiltZ: 0, lift: 0, offX: 0, offZ: 0},
-  fish: {size: 1.3, turn: 90, tiltX: -40, tiltZ: 0, lift: 0.015, offX: 0, offZ: 0.055},
-  gloves: {size: 1.65, turn: 0, tiltX: 0, tiltZ: 0, lift: 0.05, offX: 0, offZ: 0},
-  hat: {size: 1.65, turn: 0, tiltX: -19, tiltZ: 0, lift: 0.05, offX: 0, offZ: 0},
-  jug: {size: 1.7, turn: 0, tiltX: 0, tiltZ: 0, lift: 0, offX: -0.02, offZ: 0.015},
-  kiwi: {size: 1.45, turn: 0, tiltX: 0, tiltZ: 0, lift: 0, offX: 0, offZ: 0},
-  lemon: {size: 1.5, turn: 167, tiltX: 62, tiltZ: -31, lift: 0.15, offX: 0.015, offZ: -0.045},
-  monkey: {size: 1.3, turn: 2, tiltX: -30, tiltZ: 0, lift: 0, offX: 0, offZ: 0},
-  onion: {size: 1.55, turn: 0, tiltX: 0, tiltZ: 0, lift: 0, offX: 0, offZ: 0},
-  pear: {size: 1.7, turn: 0, tiltX: -18, tiltZ: 0, lift: 0, offX: 0, offZ: 0.015},
-  queen: {size: 1.5, turn: 142, tiltX: -23, tiltZ: 0, lift: 0.085, offX: 0, offZ: 0},
-  rock: {size: 1.2, turn: 20, tiltX: 0, tiltZ: 0, lift: 0.045, offX: 0, offZ: 0},
-  spoon: {size: 1.6, turn: 53, tiltX: 12, tiltZ: 0, lift: 0.06, offX: -0.005, offZ: 0},
-  table: {size: 1, turn: 175, tiltX: 0, tiltZ: 0, lift: 0, offX: -0.01, offZ: 0.02},
-  zebra: {size: 1.6, turn: 35, tiltX: -39, tiltZ: 0, lift: 0.125, offX: 0, offZ: 0.08},
-  nest: {size: 1.45, turn: 0, tiltX: 3, tiltZ: 0, lift: 0.02, offX: -0.015, offZ: 0.03},
-  umbrella: {size: 1.45, turn: 26, tiltX: 0, tiltZ: 0, lift: 0.08, offX: 0.01, offZ: 0.01},
-  vase: {size: 1.6, turn: 0, tiltX: -3, tiltZ: 0, lift: 0, offX: 0, offZ: 0},
-  wateringcan: {size: 1.9, turn: 314, tiltX: 0, tiltZ: 0, lift: 0.04, offX: -0.035, offZ: 0.045},
-  xray: {size: 1.05, turn: 49, tiltX: 12, tiltZ: 0, lift: 0.2, offX: -0.06, offZ: 0},
-  yak: {size: 1.65, turn: 30, tiltX: -57, tiltZ: 0, lift: 0.135, offX: -0.03, offZ: 0.1},
-  icecream: {size: 1.75, turn: 0, tiltX: -5, tiltZ: 0, lift: 0.03, offX: 0, offZ: 0.06},
-};
 const BLANK = { size: 1, turn: 0, tiltX: 0, tiltZ: 0, lift: 0, offX: 0, offZ: 0 };
 let setup = {};
 try {
