@@ -167,7 +167,7 @@ caseBtn.addEventListener('click', () => {
 // SETUP_DEFAULTS can be filled from the setup panel's "Copy" output to make them the same on every device.
 // Johnny's settings from 2026-11-21 (evening). Bump DEFAULTS_ID when these change: devices then drop their own
 // saved tweaks so everyone starts from the same defaults.
-const DEFAULTS_ID = '2026-11-21m';
+const DEFAULTS_ID = '2026-11-22a';
 try { if (localStorage.getItem('mb-defaults') !== DEFAULTS_ID) {
   localStorage.removeItem('mb-setup'); localStorage.removeItem('mb-sizes'); localStorage.removeItem('mb-camera');
   localStorage.setItem('mb-defaults', DEFAULTS_ID);
@@ -256,7 +256,7 @@ for (const dx of [-0.45, 0.45]) fitPoints.push(revealPoint.clone().add(new THREE
 const lookAt = new THREE.Box3().setFromPoints(fitPoints).getCenter(new THREE.Vector3());
 lookAt.y = 0.25;
 // camera: tilt (degrees above the table), turn, zoom and pan, all adjustable in setup
-const CAMERA_DEFAULTS = {tilt: 70, turn: -13, zoom: 1.25, panX: 0.12, panZ: -0.05, shown: 1.55, reveal: 'beam'};
+const CAMERA_DEFAULTS = {tilt: 70, turn: 0, zoom: 1, panX: 0, panZ: 0, shown: 1.55, reveal: 'beam'};
 const CAM_BLANK = { tilt: 66, turn: 0, zoom: 1, panX: 0, panZ: 0, shown: 1.4, reveal: 'beam', perRound: 26 };   // reveal: 'beam' or 'box'
 let camSet = {};
 try { camSet = JSON.parse(localStorage.getItem('mb-camera') || '{}'); } catch (e) {}
@@ -264,7 +264,23 @@ const cam = () => ({ ...CAM_BLANK, ...CAMERA_DEFAULTS, ...camSet });
 function saveCam() { try { localStorage.setItem('mb-camera', JSON.stringify(camSet)); } catch (e) {} }
 const viewDir = new THREE.Vector3();
 const baseLook = lookAt.clone();
+// what the camera must keep in view: the board, plus either the box (box mode) or room above the pad (shimmer mode)
+function rebuildFitPoints() {
+  fitPoints.length = 0;
+  const boxMode = cam().reveal === 'box';
+  for (const root of boxMode ? [box, board] : [board]) {
+    const b = new THREE.Box3().setFromObject(root);
+    for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z]) fitPoints.push(new THREE.Vector3(x, y, z));
+  }
+  if (boxMode) for (const dx of [-0.45, 0.45]) fitPoints.push(revealPoint.clone().add(new THREE.Vector3(dx, 0.45, 0)));
+  else {   // the pad is on the board (bottom-left corner); leave headroom for the object shown on it
+    const p = new THREE.Vector3(slots.O.x - 0.42, 0.1, (slots.O.z + slots.U.z) / 2 + 0.085);
+    for (const dx of [-0.3, 0.3]) fitPoints.push(p.clone().add(new THREE.Vector3(dx, 0.7, 0)));
+  }
+  baseLook.copy(new THREE.Box3().setFromPoints(fitPoints).getCenter(new THREE.Vector3())); baseLook.y = 0.25;
+}
 function fit() {
+  rebuildFitPoints();
   const c = cam();
   viewDir.set(Math.sin(c.turn * Math.PI / 180) * Math.cos(c.tilt * Math.PI / 180), Math.sin(c.tilt * Math.PI / 180),
               Math.cos(c.turn * Math.PI / 180) * Math.cos(c.tilt * Math.PI / 180));
@@ -461,7 +477,7 @@ const PAD_TOP = 0.11;
   for (const m of [base, rim, top]) { m.castShadow = m.receiveShadow = true; pad.add(m); }
   pad.userData = { rim, top };
 }
-function applyRevealMode() { const beam = cam().reveal === 'beam'; pad.visible = beam; box.visible = !beam; }
+function applyRevealMode() { const beam = cam().reveal === 'beam'; pad.visible = beam; box.visible = !beam; fit(); }
 applyRevealMode();
 function pressPad() {   // the top dips a little under her finger and springs back
   const top = pad.userData.top;
