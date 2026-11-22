@@ -18,7 +18,9 @@
   #full { right: 10px; }
   #sound { right: 58px; font-size: 18px; }
   #case { right: 106px; width: 52px; color: #45506a; font: 600 15px/40px system-ui, sans-serif; }
-  #home { right: 166px; font-size: 22px; }
+  #home { position: fixed; left: 10px; top: 10px; width: 64px; height: 64px; border-radius: 18px; background: rgba(255,255,255,.55);
+          display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(80,70,50,.12); }
+  #home:active { transform: scale(.94); }
   /* the word: big, centred over the three objects; tap it to hear it again */
   #word { position: fixed; left: 50%; top: 4dvh; transform: translateX(-50%); white-space: nowrap;
           font: 700 clamp(40px, min(15dvh, 8vw), 130px)/1.1 system-ui, -apple-system, sans-serif; color: #45506a; letter-spacing: 0.05em;
@@ -30,16 +32,16 @@
 <body>
 <canvas id="c"></canvas>
 <div id="word"></div>
-<a id="home" class="btn" href="./" aria-label="Choose a game">⌂</a>
+<a id="home" href="./" aria-label="Choose a game"><svg viewBox="0 0 64 64" width="46" height="46" aria-hidden="true"><rect x="15" y="29" width="34" height="25" rx="3" fill="#f6e6c6" stroke="#b98d5e" stroke-width="2.5"/><path d="M8 32 L32 11 L56 32" fill="#e98a6b" stroke="#c4664b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/><rect x="40" y="13" width="7" height="11" rx="1.5" fill="#c4664b"/><rect x="27" y="38" width="11" height="16" rx="5.5" fill="#7fa7c9"/><circle cx="35" cy="47" r="1.3" fill="#f6e6c6"/><rect x="19" y="35" width="6" height="6" rx="1.2" fill="#ffe9a8" stroke="#b98d5e" stroke-width="1.5"/></svg></a>
 <button id="case" class="btn" aria-label="Capitals or small letters">ABC</button>
 <button id="sound" class="btn" aria-label="Sound on or off">🔊</button>
 <button id="full" class="btn" aria-label="Full screen">⛶</button>
-<div id="ver">v1.52.0</div>
+<div id="ver">v1.52.1</div>
 <script>
   // iPad/iPhone Safari: no pinch or double-tap zoom, no page bounce, no long-press menu
   for (const ev of ['gesturestart', 'gesturechange', 'gestureend', 'dblclick', 'contextmenu']) document.addEventListener(ev, e => e.preventDefault(), { passive: false });
   document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
 </script>
-<script type="module" src="words.js?v=1.52.0"></script>
+<script type="module" src="words.js?v=1.52.1"></script>
 </body>
 </html>
