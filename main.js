@@ -154,7 +154,8 @@ const setupOf = name => ({ ...BLANK, ...(SETUP_DEFAULTS[name] || {}), ...(setup[
 const sizeOf = name => setupOf(name).size;
 function saveSetup() { try { localStorage.setItem('mb-setup', JSON.stringify(setup)); localStorage.removeItem('mb-sizes'); } catch (e) {} }
 const DEG = Math.PI / 180;
-const HOVER = 0.04, BOB = 0.02;   // side-on objects float gently above the board
+const HOVER = 0.04, BOB = 0.02;
+const TUMBLE_SECONDS = 7;   // the slow all-round turn when an object appears   // side-on objects float gently above the board
 // tip an object towards the camera: fully side on when it looks straight down, upright when it looks from the side
 // flat things (an X-ray sheet, a spoon, gloves) read best seen from above, so they stay lying down
 const LIES_FLAT = new Set(['xray', 'spoon', 'gloves', 'nest']);
@@ -487,6 +488,7 @@ async function reveal() {
   if (cam().reveal === 'beam') {   // shimmer into view on the pad
     pressPad();
     await beamIn(current, shownPos(current), revealScale());
+    current.tumble = 0;   // a slow tumble so she can see it from every side
     showName(current.word); say(current.word); state = 'waiting'; return;
   }
   // the lid swings fully open (felt flaps part too), the object eases up and out, then the lid closes
@@ -657,6 +659,21 @@ renderer.setAnimationLoop(now => {
   pad.userData.rim.material.emissiveIntensity = (state === 'idle' ? 0.35 : 0.15) + 0.2 * (0.5 + 0.5 * Math.sin(clock * 1.6));
   if (state === 'idle' && clock - lastActive > HINT_EVERY && cam().reveal === 'box') {   // the felt stirs a little, inviting a tap
     lastActive = clock; flapsTo(0.12, 0.8).then(() => state === 'idle' && flapsTo(0, 1.0));
+  }
+  // a just-appeared object tumbles slowly round all its axes for a few seconds, then settles; picking it up settles it
+  for (const it of allItems) {
+    if (it.tumble == null) continue;
+    const sp = it.spin;
+    if (it.placed || state === 'dragging' || state === 'setup') {
+      sp.rotation.x *= 1 - Math.min(1, dt * 4); sp.rotation.z *= 1 - Math.min(1, dt * 4);
+      if (Math.abs(sp.rotation.x) + Math.abs(sp.rotation.z) < 0.002) { sp.rotation.x = sp.rotation.z = 0; it.tumble = null; }
+      continue;
+    }
+    it.tumble += dt / TUMBLE_SECONDS;
+    const t = Math.min(1, it.tumble), env = Math.sin(Math.PI * t);
+    sp.rotation.x = 1.1 * env * Math.sin(2 * Math.PI * t);
+    sp.rotation.z = 0.7 * env * Math.sin(3 * Math.PI * t + 0.6);
+    if (t >= 1) { sp.rotation.x = sp.rotation.z = 0; it.tumble = null; }
   }
   // every side-on object floats softly up and down, each at its own pace
   for (const it of allItems) if (it.node.visible) it.lift.position.y = it.liftBase + BOB * Math.sin(clock * 0.9 + it.letter.charCodeAt(0)) * Math.sin(cam().tilt * DEG);

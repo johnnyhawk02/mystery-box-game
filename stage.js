@@ -129,7 +129,7 @@ const BLANK = { size: 1, turn: 0, tiltX: 0, tiltZ: 0, lift: 0, offX: 0, offZ: 0 
 const saved = store.get('mb-defaults') ? store.json('mb-setup', {}) : {};   // the grown-ups' tweaks from the letters game
 const setupOf = name => ({ ...BLANK, ...(SETUP_DEFAULTS[name] || {}), ...(saved[name] || {}) });
 const DEG = Math.PI / 180;
-const loaded = {};
+const loaded = {}, allItems = [];
 // each call gives the object's one copy; a game never shows the same object twice at once
 export function getItem(o) {
   return loaded[o.name] ??= load(`assets/objects/${o.name}.glb`).then(g => {
@@ -141,7 +141,7 @@ export function getItem(o) {
     inner.rotation.set(c.tiltX * DEG, c.turn * DEG, c.tiltZ * DEG, 'XYZ');
     inner.position.set(c.offX, c.lift, c.offZ);
     const height = new THREE.Box3().setFromObject(node).getSize(new THREE.Vector3()).y;
-    return { ...o, node, height };
+    const it = { ...o, node, height }; allItems.push(it); return it;
   });
 }
 
@@ -212,6 +212,21 @@ export async function beamIn(it, at, scale) {
   shimmer(at.clone(), h * 1.25, Math.max(0.12, h * 0.45), 2.8);
   await tween(2.2, t => { const f = ease((t - 0.2) / 0.8); setFade(it, f); n.scale.setScalar(scale * (0.96 + 0.04 * f)); });
   setFade(it, 1);
+  it.tumble = 0;   // then a slow tumble so it can be seen from every side
+}
+// the slow tumble: round all axes for a few seconds, easing in and out, then back upright
+const TUMBLE_SECONDS = 7;
+function updateTumbles(dt, items) {
+  for (const it of items) {
+    if (it.tumble == null) continue;
+    const n = it.node;
+    if (!n.visible) { n.rotation.x = n.rotation.z = 0; it.tumble = null; continue; }
+    it.tumble += dt / TUMBLE_SECONDS;
+    const t = Math.min(1, it.tumble), env = Math.sin(Math.PI * t);
+    n.rotation.x = 0.9 * env * Math.sin(2 * Math.PI * t);
+    n.rotation.z = 0.6 * env * Math.sin(3 * Math.PI * t + 0.6);
+    if (t >= 1) { n.rotation.x = n.rotation.z = 0; it.tumble = null; }
+  }
 }
 export async function beamOut(it) {
   const n = it.node, h = it.height * n.scale.x;
@@ -270,6 +285,7 @@ renderer.setAnimationLoop(now => {
     if (k >= 1) { tweens.splice(i, 1); tw.resolve(); }
   }
   updateShimmers(dt);
+  updateTumbles(dt, allItems);
   for (const p of pads) { p.glow += (p.want - p.glow) * Math.min(1, dt * 2.5); p.setGlow(p.glow); }
   for (const f of frameFns) f(dt);
   renderer.render(scene, camera);
