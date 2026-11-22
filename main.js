@@ -274,7 +274,8 @@ function rebuildFitPoints() {
   }
   if (boxMode) for (const dx of [-0.45, 0.45]) fitPoints.push(revealPoint.clone().add(new THREE.Vector3(dx, 0.45, 0)));
   else {   // the pad is on the board (bottom-left corner); leave headroom for the object shown on it
-    const p = new THREE.Vector3(slots.O.x - 0.42, 0.1, (slots.O.z + slots.U.z) / 2 + 0.085);
+    const r = 0.47 * 0.85, p = new THREE.Vector3(slots.O.x - 0.2 - r - 0.03, 0.1, (slots.O.z + slots.U.z) / 2 + 0.085);
+    for (const dx of [-r, r]) for (const dz of [-r, r]) fitPoints.push(p.clone().add(new THREE.Vector3(dx, 0, dz)));
     for (const dx of [-0.3, 0.3]) fitPoints.push(p.clone().add(new THREE.Vector3(dx, 0.7, 0)));
   }
   baseLook.copy(new THREE.Box3().setFromPoints(fitPoints).getCenter(new THREE.Vector3())); baseLook.y = 0.25;
@@ -464,9 +465,16 @@ let current = null, tries = 0, lastActive = 0, clock = 0;
 let queue = [];
 // ---------------- the pad (shimmer mode): a soft round platform she presses ----------------
 // the pad sits on the board itself, in the corner left free beside the two bottom rows (O-T, U-Z)
-const PAD_SCALE = 0.55;
-const PAD_AT = new THREE.Vector3(slots.O.x - 0.42, BOARD_AT.y + 0.095, (slots.O.z + slots.U.z) / 2 + 0.085);
+// it is part of the board: bigger, and poking out past the board's left edge so it covers no letters
+const PAD_SCALE = 0.85, PAD_R = 0.47 * PAD_SCALE;
+const PAD_AT = new THREE.Vector3(slots.O.x - 0.2 - PAD_R - 0.03, BOARD_AT.y + 0.095, (slots.O.z + slots.U.z) / 2 + 0.085);
 const pad = new THREE.Group(); pad.position.copy(PAD_AT); pad.scale.setScalar(PAD_SCALE); scene.add(pad);
+{ // a wooden plinth under the pad, matching the board's frame, so the part that sticks out stands on the table
+  const plinth = new THREE.Mesh(new THREE.CylinderGeometry(PAD_R + 0.025, PAD_R + 0.04, PAD_AT.y, 64),
+    new THREE.MeshStandardMaterial({ color: '#d6c29c', roughness: 0.7 }));
+  plinth.position.set(PAD_AT.x, PAD_AT.y / 2, PAD_AT.z); plinth.castShadow = plinth.receiveShadow = true;
+  pad.userData.plinth = plinth; scene.add(plinth);
+}
 const PAD_TOP = 0.11;
 {
   const mat = (c, r = 0.6) => new THREE.MeshStandardMaterial({ color: c, roughness: r });
@@ -475,9 +483,9 @@ const PAD_TOP = 0.11;
   rim.rotation.x = Math.PI / 2; rim.position.y = 0.085;
   const top = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.03, 64), mat('#f1ead9', 0.5)); top.position.y = 0.095;
   for (const m of [base, rim, top]) { m.castShadow = m.receiveShadow = true; pad.add(m); }
-  pad.userData = { rim, top };
+  Object.assign(pad.userData, { rim, top });
 }
-function applyRevealMode() { const beam = cam().reveal === 'beam'; pad.visible = beam; box.visible = !beam; fit(); }
+function applyRevealMode() { const beam = cam().reveal === 'beam'; pad.visible = beam; pad.userData.plinth.visible = beam; box.visible = !beam; fit(); }
 applyRevealMode();
 function pressPad() {   // the top dips a little under her finger and springs back
   const top = pad.userData.top;
