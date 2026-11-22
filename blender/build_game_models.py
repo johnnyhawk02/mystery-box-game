@@ -209,7 +209,7 @@ SLOTS = {}
 TILE_T = 0.025; TOP = BT + TILE_T
 for i, ch in enumerate('ABCDEFGHIJKLMNOPQRSTUVWXYZ'):
     row = max(r for r in range(ROWS) if i >= ROW_STARTS[r]); c = i - ROW_STARTS[row]
-    cx = c + (0.5 if row >= 2 else 0)   # the 6-letter rows sit centred
+    cx = c + (1 if row >= 2 else 0)   # the 6-letter rows sit to the right, leaving room for the pad bottom-left
     x = -BW/2 + 0.11 + CW*(cx + 0.5); y = BD/2 - 0.11 - CH*(row + 0.5)
     t = mesh_obj('tile_' + ch, box_bm(CW - GAP, CH - GAP, TILE_T, at=(0, 0, TILE_T/2)), [TILE[i % 4], C['dip']])
     t.location = (x, y, BT)

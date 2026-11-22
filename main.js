@@ -447,8 +447,10 @@ let state = 'idle';           // idle | busy | waiting | dragging
 let current = null, tries = 0, lastActive = 0, clock = 0;
 let queue = [];
 // ---------------- the pad (shimmer mode): a soft round platform she presses ----------------
-const PAD_AT = BOX_AT.clone().add(new THREE.Vector3(0.05, 0, -0.22));   // a little further up the screen than the box
-const pad = new THREE.Group(); pad.position.copy(PAD_AT); scene.add(pad);
+// the pad sits on the board itself, in the corner left free beside the two bottom rows (O-T, U-Z)
+const PAD_SCALE = 0.55;
+const PAD_AT = new THREE.Vector3(slots.O.x - 0.42, BOARD_AT.y + 0.095, (slots.O.z + slots.U.z) / 2 + 0.085);
+const pad = new THREE.Group(); pad.position.copy(PAD_AT); pad.scale.setScalar(PAD_SCALE); scene.add(pad);
 const PAD_TOP = 0.11;
 {
   const mat = (c, r = 0.6) => new THREE.MeshStandardMaterial({ color: c, roughness: r });
@@ -492,7 +494,7 @@ async function reveal() {
   state = 'waiting';
 }
 const shownPos = it => cam().reveal === 'beam'
-  ? PAD_AT.clone().setY(PAD_TOP + 0.03)                                         // standing on the pad
+  ? PAD_AT.clone().setY(PAD_AT.y + PAD_TOP * PAD_SCALE + 0.02)                  // standing on the pad
   : revealPoint.clone().add(new THREE.Vector3(0, 0.18 - it.height * revealScale() / 2, 0));
 
 async function drop() {
@@ -574,7 +576,7 @@ canvas.addEventListener('pointerdown', e => {
   }
   if (state === 'idle') {
     const target = cam().reveal === 'beam' ? pad : box;
-    const hitBox = ray.intersectObject(target, true).length > 0 || screenDist(e, cam().reveal === 'beam' ? PAD_AT.clone().setY(0.1) : BOX_AT.clone().setY(0.4)) < 90;
+    const hitBox = ray.intersectObject(target, true).length > 0 || screenDist(e, cam().reveal === 'beam' ? PAD_AT.clone().setY(PAD_AT.y + 0.05) : BOX_AT.clone().setY(0.4)) < 90;
     if (hitBox) reveal();
   } else if (state === 'waiting' && current) {
     const centre = current.node.position.clone().setY(current.node.position.y + current.height * current.node.scale.x / 2);
@@ -659,7 +661,7 @@ window.__mb = { get state() { return state; }, get current() { return current &&
     return { x: (p.x + 1) / 2 * r.width + r.left, y: (1 - p.y) / 2 * r.height + r.top }; },
   slotScreen(ch) { return this.screenOf(slots[ch]); },
   currentScreen() { const n = current.node; return this.screenOf(n.position.clone().setY(n.position.y + current.height * n.scale.x / 2)); },
-  boxScreen() { return this.screenOf(cam().reveal === 'beam' ? PAD_AT.clone().setY(0.1) : BOX_AT.clone().setY(0.4)); } };
+  boxScreen() { return this.screenOf(cam().reveal === 'beam' ? PAD_AT.clone().setY(PAD_AT.y + 0.05) : BOX_AT.clone().setY(0.4)); } };
 window.__mb.debugFlaps = () => flaps.map(f => { const v = f.getWorldPosition(new THREE.Vector3()); return [f.name, f.parent && f.parent.name, +v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2)]; });
 
 // ---------------- setup mode (long-press the faint gear, so a child won't open it by accident) ----------------
