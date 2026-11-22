@@ -157,11 +157,10 @@ const DEG = Math.PI / 180;
 const HOVER = 0.04, BOB = 0.02;   // side-on objects float gently above the board
 // tip an object towards the camera: fully side on when it looks straight down, upright when it looks from the side
 // flat things (an X-ray sheet, a spoon, gloves) read best seen from above, so they stay lying down
-const LIES_FLAT = new Set(['xray', 'spoon', 'gloves']);
+const LIES_FLAT = new Set(['xray', 'spoon', 'gloves', 'nest']);
 function standUp(it) {
   const k = LIES_FLAT.has(it.name) ? 0 : cam().tilt * DEG, size = sizeOf(it.name);
   it.tilt.rotation.x = -k;
-  it.lift.position.z = -0.05 * Math.sin(k);   // sit towards the back of the space, above its letter
   it.pivot.position.y = -it.baseHeight * size / 2 * Math.sin(k);   // turn about its middle
   it.liftBase = (it.baseRadius * size * 0.55 + HOVER) * Math.sin(k);   // clear of the board, hovering a little above it
 }
@@ -173,6 +172,24 @@ function applySetup(it) {
   const tx = it.tilt && !LIES_FLAT.has(it.name) ? c.tiltX * (1 - Math.sin(cam().tilt * DEG)) : c.tiltX;
   it.inner.rotation.set(tx * DEG, c.turn * DEG, c.tiltZ * DEG, 'XYZ');   // turn first, then tilt
   it.inner.position.set(c.offX, c.lift, c.offZ);
+  if (it.tilt) centreOnSpot(it);
+}
+// put the middle of what the camera sees right over the object's spot (its dip, or the pad)
+const _c = new THREE.Vector3();
+const MAX_TALL = 0.36, MAX_WIDE = 0.44;   // in an object's own units: about the dip plus a little at PLACED_SCALE
+function centreOnSpot(it) {
+  const r = it.spin.rotation.y; it.spin.rotation.y = 0; it.lift.position.x = it.lift.position.z = 0; it.lift.scale.setScalar(1);
+  // measure with the node at rest (no move or scale), so the numbers are in the node's own units
+  const p = it.node.position.clone(), sc = it.node.scale.x; it.node.position.set(0, 0, 0); it.node.scale.setScalar(1);
+  it.node.updateWorldMatrix(true, true);
+  const box = new THREE.Box3().setFromObject(it.lift), size = box.getSize(new THREE.Vector3());
+  // tall or wide things are eased down a little so they fit their space without covering its letter
+  const fitK = Math.min(1, MAX_TALL / size.z, MAX_WIDE / size.x);
+  it.lift.scale.setScalar(fitK);
+  box.getCenter(_c).multiplyScalar(fitK);
+  it.lift.position.x = -_c.x; it.lift.position.z = -_c.z;
+  it.node.position.copy(p); it.node.scale.setScalar(sc);
+  it.spin.rotation.y = r;
 }
 
 // objects load only when a round needs them, so the game starts fast on a phone
