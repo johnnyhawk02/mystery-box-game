@@ -23,7 +23,7 @@ def lines():
     objs = re.findall(r"letter: '([A-Z])', word: '([^']+)'", src)
     out = []
     for letter, word in objs:
-        out += [word, f'Find the {word}', f'{letter}. {word}']
+        out += [word, f'Find the {word}', f'{letter} is for {word}']
     return out
 
 def ssml(text):

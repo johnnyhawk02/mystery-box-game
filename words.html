@@ -7,7 +7,7 @@
 <title>Find the Word</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg">
-<link rel="stylesheet" href="stage.css?v=1.56.2">
+<link rel="stylesheet" href="stage.css?v=1.56.3">
 <style>
   /* the word: big, centred over the objects; tap it to hear it again */
   #word { position: fixed; left: 50%; top: 4dvh; transform: translateX(-50%); white-space: nowrap;
@@ -26,11 +26,11 @@
 <button id="sound" class="btn" aria-label="Sound on or off">🔊</button>
 <button id="full" class="btn" aria-label="Full screen">⛶</button>
 <div id="panel" hidden></div>
-<div id="ver">v1.56.2</div>
+<div id="ver">v1.56.3</div>
 <script>
   for (const ev of ['gesturestart', 'gesturechange', 'gestureend', 'dblclick', 'contextmenu']) document.addEventListener(ev, e => e.preventDefault(), { passive: false });
   document.addEventListener('touchmove', e => { if (!e.target.closest('#panel')) e.preventDefault(); }, { passive: false });
 </script>
-<script type="module" src="words.js?v=1.56.2"></script>
+<script type="module" src="words.js?v=1.56.3"></script>
 </body>
 </html>

@@ -517,7 +517,7 @@ async function drop() {
     tween(0.7, t => { sp.rotation.y = r0 + (r1 - r0) * ease(t); });
     await moveTo(n, slots[best], PLACED_SCALE, 0.7, 0.1);
     it.placed = true; current = null; showName('');
-    say(`${it.letter}. ${it.word}`);
+    say(`${it.letter} is for ${it.word}`);
     await wait(0.4);
     if (round.filter(i => i.placed).length >= roundTotal) return finish();
     state = 'idle'; lastActive = clock;
