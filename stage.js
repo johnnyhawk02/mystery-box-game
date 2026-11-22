@@ -55,14 +55,11 @@ const showSound = () => { if (soundBtn) { soundBtn.textContent = soundOn ? '🔊
 showSound();
 soundBtn?.addEventListener('click', () => {
   soundOn = !soundOn; showSound(); store.set('mb-sound', soundOn ? 'on' : 'off');
-  if (!soundOn) window.speechSynthesis?.cancel();
+  if (!soundOn) voice.hush();
 });
-export function say(text) {
-  if (!soundOn || !window.speechSynthesis) return;
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text); u.rate = 0.8; u.pitch = 1.05; u.lang = 'en-GB';
-  speechSynthesis.speak(u);
-}
+// recorded Sonia clips where there are some, the device's voice otherwise (voice.js)
+const voice = await import('./voice.js' + (V ? '?v=' + V : ''));
+export function say(text) { if (soundOn) voice.speak(text); }
 export const letterCase = { lower: store.get('mb-case') === 'lower', listeners: [] };
 export const cased = w => letterCase.lower ? w.toLowerCase() : w.toUpperCase();
 const caseBtn = document.getElementById('case');

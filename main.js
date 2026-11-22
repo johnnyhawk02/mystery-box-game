@@ -76,15 +76,11 @@ showSound();
 soundBtn.addEventListener('click', () => {
   soundOn = !soundOn; showSound();
   try { localStorage.setItem('mb-sound', soundOn ? 'on' : 'off'); } catch (e) {}
-  if (!soundOn) speechSynthesis?.cancel();
+  if (!soundOn) voice.hush();
 });
-function say(text) {
-  if (!soundOn || !window.speechSynthesis) return;
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.rate = 0.8; u.pitch = 1.05; u.lang = 'en-GB';
-  speechSynthesis.speak(u);
-}
+// recorded Sonia clips where there are some, the device's voice otherwise (voice.js)
+const voice = await import('./voice.js' + (V ? '?v=' + V : ''));
+function say(text) { if (soundOn) voice.speak(text); }
 document.getElementById('full').addEventListener('click', async () => {
   try {
     if (document.fullscreenElement) await document.exitFullscreen();

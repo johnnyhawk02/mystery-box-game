@@ -22,7 +22,9 @@ const UP_AFTER = 3;    // right answers at a level (on her own, once the glow wa
 const DOWN_AFTER = 3;  // helped answers in a row (when the glow waits) before stepping back one
 
 // ---------------- saved progress and the grown-ups' choices ----------------
-let level = Math.min(LEVELS.length - 1, +(store.get('mb-words-level') || 0));
+// she knows the game already, so it starts with three objects and a short wait before the glow
+const START_LEVEL = 3;
+let level = Math.min(LEVELS.length - 1, +(store.get('mb-words-lv') ?? START_LEVEL));
 let streak = 0, helpedStreak = 0;
 let chosen = store.json('mb-words-set', null);    // null = every object
 const stats = store.json('mb-words-stats', {});  // per word: { own, helped }
@@ -99,7 +101,7 @@ function record(own) {
   if (!waits || own) { streak++; helpedStreak = 0; } else { streak = 0; helpedStreak++; }
   if (streak >= UP_AFTER && level < LEVELS.length - 1) { level++; streak = 0; }
   if (waits && helpedStreak >= DOWN_AFTER && level > 2) { level--; helpedStreak = 0; }
-  store.set('mb-words-level', String(level));
+  store.set('mb-words-lv', String(level));
 }
 async function found() {
   state = 'busy'; const id = roundId;
@@ -156,7 +158,7 @@ function openPanel() {
   const lv = panel.querySelector('#levels');
   LEVELS.forEach((L, i) => {
     const b = document.createElement('button'); b.textContent = `${i + 1}: ${L.label}`; b.className = i === level ? 'on' : '';
-    b.addEventListener('click', () => { level = i; streak = helpedStreak = 0; store.set('mb-words-level', String(i)); [...lv.children].forEach((c, j) => c.className = j === i ? 'on' : ''); });
+    b.addEventListener('click', () => { level = i; streak = helpedStreak = 0; store.set('mb-words-lv', String(i)); [...lv.children].forEach((c, j) => c.className = j === i ? 'on' : ''); });
     lv.appendChild(b);
   });
   objectPicker(panel.querySelector('#pick'), chosen || OBJECTS.map(o => o.name), names => {
