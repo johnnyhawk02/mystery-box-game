@@ -138,7 +138,7 @@ caseBtn.addEventListener('click', () => {
 // SETUP_DEFAULTS can be filled from the setup panel's "Copy" output to make them the same on every device.
 // Johnny's settings from 2026-11-21 (evening). Bump DEFAULTS_ID when these change: devices then drop their own
 // saved tweaks so everyone starts from the same defaults.
-const DEFAULTS_ID = '2026-11-22b';
+const DEFAULTS_ID = '2026-11-22c';
 try { if (localStorage.getItem('mb-defaults') !== DEFAULTS_ID) {
   localStorage.removeItem('mb-setup'); localStorage.removeItem('mb-sizes'); localStorage.removeItem('mb-camera');
   localStorage.setItem('mb-defaults', DEFAULTS_ID);
@@ -168,26 +168,27 @@ function applySetup(it) {
   const c = setupOf(it.name);
   if (it.tilt) standUp(it);
   it.inner.scale.setScalar(c.size);
-  // the fwd/back tilt was tuned for the old angled camera; side on it would tip things over, so only flat things keep it
-  const tx = it.tilt && !LIES_FLAT.has(it.name) ? c.tiltX * (1 - Math.sin(cam().tilt * DEG)) : c.tiltX;
-  it.inner.rotation.set(tx * DEG, c.turn * DEG, c.tiltZ * DEG, 'XYZ');   // turn first, then tilt
-  it.inner.position.set(c.offX, c.lift, c.offZ);
-  if (it.tilt) centreOnSpot(it);
+  it.inner.rotation.set(c.tiltX * DEG, c.turn * DEG, c.tiltZ * DEG, 'XYZ');   // turn first, then tilt
+  // side on, left/right and back/front move the object as seen on screen, after it is centred on its spot
+  it.inner.position.set(it.tilt ? 0 : c.offX, c.lift, it.tilt ? 0 : c.offZ);
+  if (it.tilt) centreOnSpot(it, c);
 }
 // put the middle of what the camera sees right over the object's spot (its dip, or the pad)
 const _c = new THREE.Vector3();
 const MAX_TALL = 0.36, MAX_WIDE = 0.44;   // in an object's own units: about the dip plus a little at PLACED_SCALE
-function centreOnSpot(it) {
+function centreOnSpot(it, c) {
   const r = it.spin.rotation.y; it.spin.rotation.y = 0; it.lift.position.x = it.lift.position.z = 0; it.lift.scale.setScalar(1);
   // measure with the node at rest (no move or scale), so the numbers are in the node's own units
   const p = it.node.position.clone(), sc = it.node.scale.x; it.node.position.set(0, 0, 0); it.node.scale.setScalar(1);
   it.node.updateWorldMatrix(true, true);
   const box = new THREE.Box3().setFromObject(it.lift), size = box.getSize(new THREE.Vector3());
   // tall or wide things are eased down a little so they fit their space without covering its letter
-  const fitK = Math.min(1, MAX_TALL / size.z, MAX_WIDE / size.x);
+  // (the limit is worked out at the default size, so the Size slider still makes it bigger or smaller)
+  const k = (SETUP_DEFAULTS[it.name]?.size ?? 1) / c.size;
+  const fitK = Math.min(1, MAX_TALL / (size.z * k), MAX_WIDE / (size.x * k));
   it.lift.scale.setScalar(fitK);
   box.getCenter(_c).multiplyScalar(fitK);
-  it.lift.position.x = -_c.x; it.lift.position.z = -_c.z;
+  it.lift.position.x = -_c.x + c.offX; it.lift.position.z = -_c.z + c.offZ;
   it.node.position.copy(p); it.node.scale.setScalar(sc);
   it.spin.rotation.y = r;
 }
