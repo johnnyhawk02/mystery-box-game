@@ -170,9 +170,10 @@ function getItem(o) {
     node.visible = false; scene.add(node);
     const baseHeight = new THREE.Box3().setFromObject(node).getSize(new THREE.Vector3()).y;
     const it = { ...o, node, inner, baseHeight, placed: false, get height() { return this.baseHeight * sizeOf(this.name); } };
-    applySetup(it); return it;
+    applySetup(it); allItems.push(it); return it;
   });
 }
+const allItems = [];
 let round = [], roundReady = null, roundTotal = 0;
 function newRound() {
   // one object per letter in a round (some letters have two objects to choose from)
@@ -619,8 +620,120 @@ renderer.setAnimationLoop(now => {
   if (state === 'idle' && clock - lastActive > HINT_EVERY && cam().reveal === 'box') {   // the felt stirs a little, inviting a tap
     lastActive = clock; flapsTo(0.12, 0.8).then(() => state === 'idle' && flapsTo(0, 1.0));
   }
+  updateFlags(dt);
   renderer.render(scene, camera);
 });
+
+// ---------------- letter flags: when a placed object hides a letter from the camera, a small flag shows it ----------------
+// After things settle, each letter is checked by casting rays from the camera to points across it. If objects on the
+// board block a third or more of them, a little flag with that letter rises at a corner of its space that the camera
+// can see. It folds away again when the letter is clear (objects leave at the end of a round).
+const flagTex = {}, flags = {};
+function flagTexture(ch) {
+  const key = (lowerCase ? 'l' : 'u') + ch;
+  if (flagTex[key]) return flagTex[key];
+  const c = document.createElement('canvas'); c.width = 160; c.height = 128; const g = c.getContext('2d');
+  g.fillStyle = '#f7efdc'; g.beginPath(); g.roundRect(4, 4, 152, 120, 22); g.fill();
+  g.strokeStyle = '#d9c9a4'; g.lineWidth = 6; g.stroke();
+  g.fillStyle = '#45506a'; g.font = '700 92px system-ui, -apple-system, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(lowerCase ? ch.toLowerCase() : ch, 80, 68);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  return flagTex[key] = t;
+}
+const POLE_H = 0.42, FLAG_W = 0.2, FLAG_H = 0.16;
+function makeFlag(ch) {
+  const g = new THREE.Group();
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.01, POLE_H, 10), new THREE.MeshStandardMaterial({ color: '#b98d5e', roughness: 0.6 }));
+  pole.position.y = POLE_H / 2; pole.castShadow = true; g.add(pole);
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.016, 12, 8), new THREE.MeshStandardMaterial({ color: '#e9c46a', roughness: 0.4 }));
+  knob.position.y = POLE_H + 0.005; g.add(knob);
+  // the flag itself always faces the camera, so the letter is never squashed by the view from above
+  const card = new THREE.Mesh(new THREE.PlaneGeometry(FLAG_W, FLAG_H), new THREE.MeshBasicMaterial({ map: flagTexture(ch), transparent: true, toneMapped: false }));
+  const holder = new THREE.Group(); holder.position.y = POLE_H - FLAG_H / 2 - 0.01; holder.add(card); card.position.x = FLAG_W / 2 + 0.008;
+  g.add(holder);
+  g.scale.set(1, 0.001, 1); g.visible = false; scene.add(g);
+  return flags[ch] = { g, card, holder, show: 0, want: 0 };
+}
+const letterMesh = ch => board.getObjectByName((lowerCase ? 'lower_' : 'upper_') + ch);
+const flagRay = new THREE.Raycaster();
+function blockers() { return allItems.filter(it => it.node.visible && (it.placed || state === 'setup')); }
+function hiddenShare(points, blocks) {
+  let hidden = 0; const camPos = camera.position;
+  for (const p of points) {
+    const dir = p.clone().sub(camPos), dist = dir.length(); dir.normalize();
+    flagRay.set(camPos, dir); flagRay.far = dist - 0.01;
+    for (const b of blocks) {
+      if (!flagRay.ray.intersectsBox(b.box)) continue;
+      if (flagRay.intersectObject(b.node, true).length) { hidden++; break; }
+    }
+  }
+  return hidden / points.length;
+}
+// screen rectangles (pixels) of every other letter, and of a flag's card, to keep flags off other letters
+function screenRect(points) {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const p of points) { const v = p.clone().project(camera); x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y); }
+  return { x0, y0, x1, y1 };
+}
+function letterRects(except) {
+  const out = [];
+  for (const c of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
+    if (c === except) continue;
+    const b = new THREE.Box3().setFromObject(letterMesh(c)), pts = [];
+    for (const x of [b.min.x, b.max.x]) for (const z of [b.min.z, b.max.z]) pts.push(new THREE.Vector3(x, b.max.y, z));
+    out.push(screenRect(pts));
+  }
+  return out;
+}
+function flagRect(base, side) {
+  const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0), up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+  const c = base.clone().setY(base.y + POLE_H - FLAG_H / 2).addScaledVector(right, side * (FLAG_W / 2 + 0.008));
+  return screenRect([-1, 1].flatMap(a => [-1, 1].map(b => c.clone().addScaledVector(right, a * FLAG_W / 2).addScaledVector(up, b * FLAG_H / 2))));
+}
+const overlap = (a, b) => Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0)) * Math.max(0, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0));
+function checkFlags() {
+  const blocks = blockers().map(it => ({ node: it.node, box: new THREE.Box3().setFromObject(it.node) }));
+  for (const ch of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
+    const f = flags[ch];
+    if (!blocks.length) { if (f) f.want = 0; continue; }
+    const bb = new THREE.Box3().setFromObject(letterMesh(ch)), pts = [];
+    for (const u of [0.15, 0.38, 0.62, 0.85]) for (const w of [0.2, 0.5, 0.8])
+      pts.push(new THREE.Vector3(bb.min.x + (bb.max.x - bb.min.x) * u, bb.max.y, bb.min.z + (bb.max.z - bb.min.z) * w));
+    const hidden = hiddenShare(pts, blocks) >= 0.3;
+    if (!hidden) { if (f) f.want = 0; continue; }
+    const fl = f || makeFlag(ch);
+    if (!fl.want) {   // choose the spot where the flag is best seen and covers no other letter
+      const cz = slots[ch].z + SLOT_TO_TILE, rects = letterRects(ch);
+      let best = null;
+      for (const [dx, dz] of [[-0.17, -0.21], [0.17, -0.21], [-0.19, 0], [0.19, 0], [0.17, 0.2], [-0.17, 0.2]]) for (const side of [1, -1]) {
+        const base = new THREE.Vector3(slots[ch].x + dx, BOARD_AT.y + 0.095, cz + dz);
+        const r = flagRect(base, side), mid = base.clone().setY(base.y + POLE_H - FLAG_H / 2);
+        const cardMid = mid.clone().add(new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0).multiplyScalar(side * (FLAG_W / 2 + 0.008)));
+        const score = 2 * hiddenShare([cardMid, mid], blocks) + rects.reduce((a, q) => a + overlap(r, q), 0) / ((r.x1 - r.x0) * (r.y1 - r.y0));
+        if (!best || score < best.score) best = { base, side, score };
+      }
+      fl.g.position.copy(best.base); fl.side = best.side;
+      fl.card.position.x = best.side * (FLAG_W / 2 + 0.008);
+      fl.card.material.map = flagTexture(ch); fl.card.material.needsUpdate = true;
+    }
+    fl.want = 1;
+  }
+}
+let flagSig = '', flagDue = 0;
+function updateFlags(dt) {
+  // re-check a moment after what's on the board (or the view) changes, once objects have settled
+  const sig = blockers().map(it => it.name).join() + '|' + lowerCase + '|' + camera.position.toArray().map(v => v.toFixed(2)).join();
+  const now = performance.now() / 1000;   // real time, so slow frames don't delay it
+  if (sig !== flagSig) { flagSig = sig; flagDue = now + 1.4; }
+  if (flagDue && now >= flagDue) { flagDue = 0; checkFlags(); }
+  for (const f of Object.values(flags)) {
+    f.show += (f.want - f.show) * Math.min(1, dt * 2.2);
+    const k = ease(f.show);
+    f.g.visible = f.show > 0.01; f.g.scale.set(1, Math.max(0.001, k), 1);
+    f.card.material.opacity = k;
+    f.holder.quaternion.copy(camera.quaternion);   // face the camera
+  }
+}
 
 // read-only hook for automated tests
 window.__mb = { get state() { return state; }, get current() { return current && current.letter; },
@@ -761,3 +874,4 @@ window.__mb.dbgShadow = () => { const it = current; if (!it) return null; let n 
   return { n, withDepth, uv, fade: it.shadowFade && it.shadowFade.value, cast: (() => { let c = []; it.node.traverse(o => o.isMesh && c.push(o.castShadow)); return c; })() }; };
 window.__mb.placedScreen = () => { const it = round.find(i => i.placed); return it ? window.__mb.screenOf(it.node.position.clone().setY(0.12)) : null; };
 window.__mb.anySpinning = () => round.some(i => i.spinning);
+window.__mb.flags = () => Object.entries(flags).filter(([, f]) => f.want).map(([ch]) => ch).join('');
