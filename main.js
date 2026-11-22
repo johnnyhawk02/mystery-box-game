@@ -5,7 +5,7 @@ import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
 import { RoomEnvironment } from './vendor/environments/RoomEnvironment.js';
 import { DRACOLoader } from './vendor/loaders/DRACOLoader.js';
 
-// every object the game knows; each round picks ROUND_SIZE of them with different letters
+// every object the game knows; each round picks roundSize() of them with different letters
 const OBJECTS = [
   { name: 'apple', letter: 'A', word: 'apple' },
   { name: 'football', letter: 'B', word: 'ball' },
@@ -34,7 +34,8 @@ const OBJECTS = [
   { name: 'yak', letter: 'Y', word: 'yak' },
   { name: 'zebra', letter: 'Z', word: 'zebra' },
 ];
-const ROUND_SIZE = 6;
+// how many objects make a round (setup → View → Objects per round); 26 = the whole alphabet
+const roundSize = () => cam().perRound;
 const SPIN_SECONDS = 7;     // one slow turn while the object waits to be dragged
 const BOX_AT = new THREE.Vector3(-2.2, 0, 0.62);   // bottom-left, so the shown object has open space above it
 const BOX_SCALE = 0.85;
@@ -229,12 +230,19 @@ function getItem(o) {
     applySetup(it); return it;
   });
 }
-let round = [], roundReady = null;
+let round = [], roundReady = null, roundTotal = 0;
 function newRound() {
   // one object per letter in a round (some letters have two objects to choose from)
   const picks = [], used = new Set();
-  for (const o of shuffle(OBJECTS.slice())) if (!used.has(o.letter) && picks.length < ROUND_SIZE) { picks.push(o); used.add(o.letter); }
-  roundReady = Promise.all(picks.map(getItem)).then(r => { round = r; queue = shuffle(r.slice()); fillPile(r); });
+  for (const o of shuffle(OBJECTS.slice())) if (!used.has(o.letter) && picks.length < roundSize()) { picks.push(o); used.add(o.letter); }
+  if (cam().reveal === 'box') {   // the box shows its whole jumble, so load the lot up front
+    roundReady = Promise.all(picks.map(getItem)).then(r => { round = r; queue = shuffle(r.slice()); fillPile(r); });
+  } else {                        // shimmer mode: load each object only when it's called for (quick start on an iPad)
+    round = []; queue = shuffle(picks.slice()); roundTotal = picks.length;
+    getItem(queue[queue.length - 1]);   // warm up the first one
+    roundReady = Promise.resolve();
+  }
+  roundTotal = picks.length;
   return roundReady;
 }
 
@@ -249,7 +257,7 @@ const lookAt = new THREE.Box3().setFromPoints(fitPoints).getCenter(new THREE.Vec
 lookAt.y = 0.25;
 // camera: tilt (degrees above the table), turn, zoom and pan, all adjustable in setup
 const CAMERA_DEFAULTS = {tilt: 70, turn: -13, zoom: 1.25, panX: 0.12, panZ: -0.05, shown: 1.55, reveal: 'beam'};
-const CAM_BLANK = { tilt: 66, turn: 0, zoom: 1, panX: 0, panZ: 0, shown: 1.4, reveal: 'beam' };   // reveal: 'beam' or 'box'
+const CAM_BLANK = { tilt: 66, turn: 0, zoom: 1, panX: 0, panZ: 0, shown: 1.4, reveal: 'beam', perRound: 26 };   // reveal: 'beam' or 'box'
 let camSet = {};
 try { camSet = JSON.parse(localStorage.getItem('mb-camera') || '{}'); } catch (e) {}
 const cam = () => ({ ...CAM_BLANK, ...CAMERA_DEFAULTS, ...camSet });
@@ -462,7 +470,11 @@ newRound();
 async function reveal() {
   state = 'busy';
   await roundReady;
-  current = queue.pop(); tries = 0;
+  const next = queue.pop();
+  current = next.node ? next : await getItem(next);   // box mode queues loaded items, shimmer mode queues names
+  if (!round.includes(current)) round.push(current);
+  if (queue.length) getItem(queue[queue.length - 1].node ? OBJECTS.find(o => o.name === queue[queue.length - 1].name) : queue[queue.length - 1]);   // preload the next one
+  tries = 0;
   const n = current.node;
   if (cam().reveal === 'beam') {   // shimmer into view on the pad
     pressPad();
@@ -499,7 +511,7 @@ async function drop() {
     it.placed = true; current = null; showName('');
     say(`${it.letter}. ${it.word}`);
     await wait(0.4);
-    if (round.every(i => i.placed)) return finish();
+    if (round.filter(i => i.placed).length >= roundTotal) return finish();
     state = 'idle'; lastActive = clock;
   } else {
     tries++;
@@ -736,6 +748,7 @@ const CAM_FIELDS = [
   ['panX', 'Left/right', -2, 2, 0.01, v => v.toFixed(2)],
   ['panZ', 'Up/down', -1.5, 1.5, 0.01, v => v.toFixed(2)],
   ['shown', 'Shown size', 0.6, 2.6, 0.05, v => v.toFixed(2)],
+  ['perRound', 'Objects per round', 3, 26, 1, v => String(v)],
 ];
 let tab = 'object';
 function showTab(t) {
