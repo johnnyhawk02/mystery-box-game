@@ -106,6 +106,8 @@ scene.updateMatrixWorld(true);
 const revealPoint = box.getObjectByName('reveal_point').getWorldPosition(new THREE.Vector3());
 const insideBox = BOX_AT.clone().add(new THREE.Vector3(0, 0.1, 0));
 const aboveBox = BOX_AT.clone().add(new THREE.Vector3(0, 0.85, 0));
+// the tile centre is this far in front of its slot (z)
+const SLOT_TO_TILE = 0.085;
 const slots = {}, tiles = {};
 for (const ch of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
   slots[ch] = board.getObjectByName('slot_' + ch).getWorldPosition(new THREE.Vector3());
@@ -215,7 +217,7 @@ function rebuildFitPoints() {
   }
   if (boxMode) for (const dx of [-0.45, 0.45]) fitPoints.push(revealPoint.clone().add(new THREE.Vector3(dx, 0.45, 0)));
   else {   // the pad is on the board (bottom-left corner); leave headroom for the object shown on it
-    const r = 0.47 * 0.85, p = new THREE.Vector3(slots.O.x - 0.2 - r - 0.03, 0.1, (slots.O.z + slots.U.z) / 2 + 0.085);
+    const r = 0.47 * 0.85, p = new THREE.Vector3(slots.O.x - 0.2 - r - 0.03, 0.1, (slots.O.z + slots.U.z) / 2 + SLOT_TO_TILE);
     for (const dx of [-r, r]) for (const dz of [-r, r]) fitPoints.push(p.clone().add(new THREE.Vector3(dx, 0, dz)));
     for (const dx of [-0.3, 0.3]) fitPoints.push(p.clone().add(new THREE.Vector3(dx, 0.7, 0)));
   }
@@ -408,7 +410,7 @@ let queue = [];
 // the pad sits on the board itself, in the corner left free beside the two bottom rows (O-T, U-Z)
 // it is part of the board: bigger, and poking out past the board's left edge so it covers no letters
 const PAD_SCALE = 0.85, PAD_R = 0.47 * PAD_SCALE;
-const PAD_AT = new THREE.Vector3(slots.O.x - 0.2 - PAD_R - 0.03, BOARD_AT.y + 0.095, (slots.O.z + slots.U.z) / 2 + 0.085);
+const PAD_AT = new THREE.Vector3(slots.O.x - 0.2 - PAD_R - 0.03, BOARD_AT.y + 0.095, (slots.O.z + slots.U.z) / 2 + SLOT_TO_TILE);
 const pad = new THREE.Group(); pad.position.copy(PAD_AT); pad.scale.setScalar(PAD_SCALE); scene.add(pad);
 { // a wooden plinth under the pad, matching the board's frame, so the part that sticks out stands on the table
   const plinth = new THREE.Mesh(new THREE.CylinderGeometry(PAD_R + 0.025, PAD_R + 0.04, PAD_AT.y, 64),
@@ -553,7 +555,7 @@ canvas.addEventListener('pointerdown', e => {
       // tapping a letter tile also works: the object glides over to it, then drops as if dragged
       const hit = new THREE.Vector3();
       if (ray.ray.intersectPlane(dragPlane, hit)) {
-        const ch = Object.keys(slots).find(k => Math.abs(hit.x - slots[k].x) < 0.2 && Math.abs(hit.z - (slots[k].z + 0.085)) < 0.25);
+        const ch = Object.keys(slots).find(k => Math.abs(hit.x - slots[k].x) < 0.2 && Math.abs(hit.z - (slots[k].z + SLOT_TO_TILE)) < 0.25);
         if (ch) tapTo(ch);
       }
     }
@@ -687,7 +689,7 @@ canvas.addEventListener('pointerdown', e => {
   if (hitObj) return pick(hitObj);
   const hit = new THREE.Vector3();
   if (ray.ray.intersectPlane(dragPlane, hit)) {
-    const ch = Object.keys(slots).find(k => Math.abs(hit.x - slots[k].x) < 0.2 && Math.abs(hit.z - (slots[k].z + 0.085)) < 0.25);
+    const ch = Object.keys(slots).find(k => Math.abs(hit.x - slots[k].x) < 0.2 && Math.abs(hit.z - (slots[k].z + SLOT_TO_TILE)) < 0.25);
     const it = ch && setupItems.find(i => i.letter === ch);
     if (it) pick(it);
   }
@@ -753,7 +755,7 @@ document.getElementById('closePanel').addEventListener('click', async () => {
   await newRound();          // back to the game with a fresh set in the box
   state = 'idle'; lastActive = clock;
 });
-window.__mb.tileScreen = ch => window.__mb.screenOf(slots[ch].clone().setZ(slots[ch].z + 0.17));
+window.__mb.tileScreen = ch => window.__mb.screenOf(slots[ch].clone().setZ(slots[ch].z + 2 * SLOT_TO_TILE));
 window.__mb.dbgShadow = () => { const it = current; if (!it) return null; let n = 0, withDepth = 0, uv = 0;
   it.node.traverse(o => { if (o.isMesh) { n++; if (o.customDepthMaterial) withDepth++; if (o.geometry.attributes.uv) uv++; } });
   return { n, withDepth, uv, fade: it.shadowFade && it.shadowFade.value, cast: (() => { let c = []; it.node.traverse(o => o.isMesh && c.push(o.castShadow)); return c; })() }; };
