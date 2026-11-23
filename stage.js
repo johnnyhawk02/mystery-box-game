@@ -133,7 +133,9 @@ const loaded = {}, allItems = [];
 // each call gives the object's one copy; a game never shows the same object twice at once
 export function getItem(o) {
   return loaded[o.name] ??= load(`assets/objects/${o.name}.glb`).then(g => {
-    const node = new THREE.Group(), inner = new THREE.Group(); inner.add(g.scene); node.add(inner);
+    // node > tum > mid > inner: the tumble turns about the object's middle (tum), lifted so it never dips into the table
+    const node = new THREE.Group(), tum = new THREE.Group(), mid = new THREE.Group(), inner = new THREE.Group();
+    inner.add(g.scene); mid.add(inner); tum.add(mid); node.add(tum);
     node.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
     node.visible = false; scene.add(node);
     const c = setupOf(o.name);
@@ -141,7 +143,9 @@ export function getItem(o) {
     inner.rotation.set(c.tiltX * DEG, c.turn * DEG, c.tiltZ * DEG, 'XYZ');
     inner.position.set(c.offX, c.lift, c.offZ);
     const height = new THREE.Box3().setFromObject(node).getSize(new THREE.Vector3()).y;
-    const it = { ...o, node, height }; allItems.push(it); return it;
+    const sz = new THREE.Box3().setFromObject(node).getSize(new THREE.Vector3());
+    mid.position.y = -height / 2; tum.position.y = height / 2;
+    const it = { ...o, node, height, tum, reach: sz.length() / 2 }; allItems.push(it); return it;
   });
 }
 
@@ -219,13 +223,15 @@ const TUMBLE_SECONDS = 7;
 function updateTumbles(dt, items) {
   for (const it of items) {
     if (it.tumble == null) continue;
-    const n = it.node;
-    if (!n.visible) { n.rotation.x = n.rotation.z = 0; it.tumble = null; continue; }
+    const n = it.tum, rest = it.height / 2;
+    if (!it.node.visible) { n.rotation.x = n.rotation.z = 0; n.position.y = rest; it.tumble = null; continue; }
     it.tumble += dt / TUMBLE_SECONDS;
     const t = Math.min(1, it.tumble), env = Math.sin(Math.PI * t);
     n.rotation.x = 0.9 * env * Math.sin(2 * Math.PI * t);
     n.rotation.z = 0.6 * env * Math.sin(3 * Math.PI * t + 0.6);
-    if (t >= 1) { n.rotation.x = n.rotation.z = 0; it.tumble = null; }
+    // rise while turning, by enough that no corner reaches the table, then come back down
+    n.position.y = rest + Math.min(1, env * 2.5) * Math.max(0, it.reach * 0.85 - rest + 0.02);
+    if (t >= 1) { n.rotation.x = n.rotation.z = 0; n.position.y = rest; it.tumble = null; }
   }
 }
 export async function beamOut(it) {

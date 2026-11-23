@@ -206,8 +206,8 @@ function getItem(o) {
     inner.add(g.scene); pivot.add(inner); spin.add(pivot); tilt.add(spin); lift.add(tilt); node.add(lift); shadowy(node);
     node.visible = false; scene.add(node);
     const bb = new THREE.Box3().setFromObject(node), sz = bb.getSize(new THREE.Vector3());
-    const baseHeight = sz.y, baseRadius = Math.hypot(sz.x, sz.z) / 2;
-    const it = { ...o, node, inner, lift, tilt, spin, pivot, baseHeight, baseRadius, placed: false, get height() { return this.baseHeight * sizeOf(this.name); } };
+    const baseHeight = sz.y, baseRadius = Math.hypot(sz.x, sz.z) / 2, baseReach = sz.length() / 2;
+    const it = { ...o, node, inner, lift, tilt, spin, pivot, baseHeight, baseRadius, baseReach, placed: false, get height() { return this.baseHeight * sizeOf(this.name); } };
     applySetup(it); allItems.push(it); return it;
   });
 }
@@ -666,17 +666,20 @@ renderer.setAnimationLoop(now => {
     const sp = it.spin;
     if (it.placed || state === 'dragging' || state === 'setup') {
       sp.rotation.x *= 1 - Math.min(1, dt * 4); sp.rotation.z *= 1 - Math.min(1, dt * 4);
-      if (Math.abs(sp.rotation.x) + Math.abs(sp.rotation.z) < 0.002) { sp.rotation.x = sp.rotation.z = 0; it.tumble = null; }
+      it.tumbleLift = (it.tumbleLift || 0) * (1 - Math.min(1, dt * 4));
+      if (Math.abs(sp.rotation.x) + Math.abs(sp.rotation.z) < 0.002) { sp.rotation.x = sp.rotation.z = 0; it.tumble = null; it.tumbleLift = 0; }
       continue;
     }
     it.tumble += dt / TUMBLE_SECONDS;
     const t = Math.min(1, it.tumble), env = Math.sin(Math.PI * t);
     sp.rotation.x = 1.1 * env * Math.sin(2 * Math.PI * t);
     sp.rotation.z = 0.7 * env * Math.sin(3 * Math.PI * t + 0.6);
-    if (t >= 1) { sp.rotation.x = sp.rotation.z = 0; it.tumble = null; }
+    // rise while turning so no corner dips into the pad, then come back down
+    it.tumbleLift = Math.min(1, env * 2.5) * Math.max(0, it.baseReach * 0.85 * sizeOf(it.name) * it.lift.scale.x - it.liftBase + 0.02);
+    if (t >= 1) { sp.rotation.x = sp.rotation.z = 0; it.tumble = null; it.tumbleLift = 0; }
   }
   // every side-on object floats softly up and down, each at its own pace
-  for (const it of allItems) if (it.node.visible) it.lift.position.y = it.liftBase + BOB * Math.sin(clock * 0.9 + it.letter.charCodeAt(0)) * Math.sin(cam().tilt * DEG);
+  for (const it of allItems) if (it.node.visible) it.lift.position.y = it.liftBase + (it.tumbleLift || 0) + BOB * Math.sin(clock * 0.9 + it.letter.charCodeAt(0)) * Math.sin(cam().tilt * DEG);
   updateFlags(dt);
   renderer.render(scene, camera);
 });
